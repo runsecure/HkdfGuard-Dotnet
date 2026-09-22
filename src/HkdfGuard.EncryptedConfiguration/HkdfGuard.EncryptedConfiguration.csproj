@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\HkdfGuard.Abstractions\HkdfGuard.Abstractions.csproj" />
     <ProjectReference Include="..\HkdfGuard.DataEncryptionKey\HkdfGuard.DataEncryptionKey.csproj" />
+    <ProjectReference Include="..\HkdfGuard.Diagnostics\HkdfGuard.Diagnostics.csproj" />
   </ItemGroup>
 
   <ItemGroup>

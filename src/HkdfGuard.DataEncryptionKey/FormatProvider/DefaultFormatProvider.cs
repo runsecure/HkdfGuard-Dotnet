@@ -1,6 +1,6 @@
-using HkdfGuard.DataEncryptionKey.Diagnostics;
 using HkdfGuard.DataEncryptionKey.Utilities;
 using HkdfGuard.Abstractions;
+using HkdfGuard.Diagnostics;
 
 namespace HkdfGuard.DataEncryptionKey.FormatProvider;
 
@@ -12,10 +12,10 @@ public class DefaultFormatProvider : IEncryptedFormatProvider
 
     public string Format(KeyTrackingValue value)
     {
-        using var activity = DataProtectionDiagnostics.ActivitySource.StartActivity("DefaultFormatProvider.Format");
-        if (DataProtectionDiagnostics.EnableSensitiveLogging)
-            DataProtectionDiagnostics.LogSensitiveOperation(activity, "DefaultFormatProvider.Format",
-                ("keyVersion", value.KeyVersion), ("valueLength", value.Value.Length));
+        using var activity = HkdfGuardTelemetry.DataProtection.ActivitySource.StartActivity(ActivityNames.DataProtection.FormatProviderFormat);
+        if (HkdfGuardTelemetry.DataProtection.EnableSensitiveLogging)
+            HkdfGuardTelemetry.DataProtection.LogSensitiveOperation(activity, ActivityNames.DataProtection.FormatProviderFormat,
+                (AttributeNames.KeyVersion, value.KeyVersion), (AttributeNames.ValueLength, value.Value.Length));
 
         try
         {
@@ -24,17 +24,17 @@ public class DefaultFormatProvider : IEncryptedFormatProvider
         }
         catch (Exception ex)
         {
-            DataProtectionDiagnostics.RecordException(activity, ex);
+            HkdfGuardTelemetry.DataProtection.RecordException(activity, ex);
             throw;
         }
     }
 
     public KeyTrackingValue Parse(ReadOnlySpan<char> encrypted)
     {
-        using var activity = DataProtectionDiagnostics.ActivitySource.StartActivity("DefaultFormatProvider.Parse");
-        if (DataProtectionDiagnostics.EnableSensitiveLogging)
-            DataProtectionDiagnostics.LogSensitiveOperation(activity, "DefaultFormatProvider.Parse",
-                ("encryptedLength", encrypted.Length));
+        using var activity = HkdfGuardTelemetry.DataProtection.ActivitySource.StartActivity(ActivityNames.DataProtection.FormatProviderParse);
+        if (HkdfGuardTelemetry.DataProtection.EnableSensitiveLogging)
+            HkdfGuardTelemetry.DataProtection.LogSensitiveOperation(activity, ActivityNames.DataProtection.FormatProviderParse,
+                (AttributeNames.EncryptedLength, encrypted.Length));
 
         try
         {
@@ -56,7 +56,7 @@ public class DefaultFormatProvider : IEncryptedFormatProvider
         }
         catch (Exception ex)
         {
-            DataProtectionDiagnostics.RecordException(activity, ex);
+            HkdfGuardTelemetry.DataProtection.RecordException(activity, ex);
             throw;
         }
     }
@@ -64,10 +64,10 @@ public class DefaultFormatProvider : IEncryptedFormatProvider
     /// <inheritdoc/>
     public int GetMaxDecryptedLength(ReadOnlySpan<char> encrypted)
     {
-        using var activity = DataProtectionDiagnostics.ActivitySource.StartActivity("DefaultFormatProvider.GetMaxDecryptedLength");
-        if (DataProtectionDiagnostics.EnableSensitiveLogging)
-            DataProtectionDiagnostics.LogSensitiveOperation(activity, "DefaultFormatProvider.GetMaxDecryptedLength",
-                ("encryptedLength", encrypted.Length));
+        using var activity = HkdfGuardTelemetry.DataProtection.ActivitySource.StartActivity(ActivityNames.DataProtection.FormatProviderGetMaxDecryptedLength);
+        if (HkdfGuardTelemetry.DataProtection.EnableSensitiveLogging)
+            HkdfGuardTelemetry.DataProtection.LogSensitiveOperation(activity, ActivityNames.DataProtection.FormatProviderGetMaxDecryptedLength,
+                (AttributeNames.EncryptedLength, encrypted.Length));
 
         try
         {
@@ -82,7 +82,7 @@ public class DefaultFormatProvider : IEncryptedFormatProvider
         }
         catch (Exception ex)
         {
-            DataProtectionDiagnostics.RecordException(activity, ex);
+            HkdfGuardTelemetry.DataProtection.RecordException(activity, ex);
             throw;
         }
     }

@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 using HkdfGuard.Abstractions;
-using HkdfGuard.CryptoSession.AesGcm256.Diagnostics;
+using HkdfGuard.Diagnostics;
 
 namespace HkdfGuard.CryptoSession.AesGcm256;
 
@@ -49,10 +49,10 @@ internal class AesGcmCryptoSession : ICryptoSession
     /// <inheritdoc/>
     public int Encrypt(Span<byte> plaintext, ReadOnlySpan<byte> aad, Span<byte> result)
     {
-        using var activity = AesGcm256Diagnostics.ActivitySource.StartActivity("AesGcmCryptoSession.Encrypt");
-        if (AesGcm256Diagnostics.EnableSensitiveLogging)
-            AesGcm256Diagnostics.LogSensitiveOperation(activity, "AesGcmCryptoSession.Encrypt",
-                ("plaintextLength", plaintext.Length), ("aadLength", aad.Length));
+        using var activity = HkdfGuardTelemetry.CryptoSessionAesGcm256.ActivitySource.StartActivity(ActivityNames.CryptoSessionAesGcm256.Encrypt);
+        if (HkdfGuardTelemetry.CryptoSessionAesGcm256.EnableSensitiveLogging)
+            HkdfGuardTelemetry.CryptoSessionAesGcm256.LogSensitiveOperation(activity, ActivityNames.CryptoSessionAesGcm256.Encrypt,
+                (AttributeNames.PlaintextLength, plaintext.Length), (AttributeNames.AadLength, aad.Length));
 
         try
         {
@@ -60,7 +60,7 @@ internal class AesGcmCryptoSession : ICryptoSession
         }
         catch (Exception ex)
         {
-            AesGcm256Diagnostics.RecordException(activity, ex);
+            HkdfGuardTelemetry.CryptoSessionAesGcm256.RecordException(activity, ex);
             throw;
         }
         finally
@@ -96,10 +96,10 @@ internal class AesGcmCryptoSession : ICryptoSession
     /// <inheritdoc/>
     public int Decrypt(ReadOnlySpan<byte> ciphertext, ReadOnlySpan<byte> aad, Span<byte> result)
     {
-        using var activity = AesGcm256Diagnostics.ActivitySource.StartActivity("AesGcmCryptoSession.Decrypt");
-        if (AesGcm256Diagnostics.EnableSensitiveLogging)
-            AesGcm256Diagnostics.LogSensitiveOperation(activity, "AesGcmCryptoSession.Decrypt",
-                ("ciphertextLength", ciphertext.Length), ("aadLength", aad.Length));
+        using var activity = HkdfGuardTelemetry.CryptoSessionAesGcm256.ActivitySource.StartActivity(ActivityNames.CryptoSessionAesGcm256.Decrypt);
+        if (HkdfGuardTelemetry.CryptoSessionAesGcm256.EnableSensitiveLogging)
+            HkdfGuardTelemetry.CryptoSessionAesGcm256.LogSensitiveOperation(activity, ActivityNames.CryptoSessionAesGcm256.Decrypt,
+                (AttributeNames.CiphertextLength, ciphertext.Length), (AttributeNames.AadLength, aad.Length));
 
         try
         {
@@ -107,7 +107,7 @@ internal class AesGcmCryptoSession : ICryptoSession
         }
         catch (Exception ex)
         {
-            AesGcm256Diagnostics.RecordException(activity, ex);
+            HkdfGuardTelemetry.CryptoSessionAesGcm256.RecordException(activity, ex);
             throw;
         }
     }

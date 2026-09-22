@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 using HkdfGuard.Abstractions;
-using HkdfGuard.DataEncryptionKey.Diagnostics;
+using HkdfGuard.Diagnostics;
 
 namespace HkdfGuard.DataEncryptionKey;
 
@@ -49,7 +49,7 @@ public sealed class PipelineDataEncryptionKey : IDataProtectionKey, IDisposable
         if (dek.Length != DekLength)
             throw new ArgumentException($"DEK must be exactly {DekLength} bytes.", nameof(dek));
 
-        using var activity = DataProtectionDiagnostics.ActivitySource.StartActivity("PipelineDataEncryptionKey.Initialize");
+        using var activity = HkdfGuardTelemetry.DataProtection.ActivitySource.StartActivity(ActivityNames.DataProtection.PipelineKeyInitialize);
         try
         {
             _dek = dek;
@@ -58,7 +58,7 @@ public sealed class PipelineDataEncryptionKey : IDataProtectionKey, IDisposable
         }
         catch (Exception ex)
         {
-            DataProtectionDiagnostics.RecordException(activity, ex);
+            HkdfGuardTelemetry.DataProtection.RecordException(activity, ex);
             throw;
         }
     }

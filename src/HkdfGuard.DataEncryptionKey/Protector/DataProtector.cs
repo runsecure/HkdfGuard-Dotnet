@@ -1,7 +1,7 @@
 using System.Text;
-using HkdfGuard.DataEncryptionKey.Diagnostics;
 using HkdfGuard.DataEncryptionKey;
 using HkdfGuard.Abstractions;
+using HkdfGuard.Diagnostics;
 
 namespace HkdfGuard.DataEncryptionKey.Protector;
 
@@ -25,10 +25,10 @@ internal sealed class DataProtector(
     /// <inheritdoc/>
     public string Encrypt(ReadOnlySpan<char> plaintext)
     {
-        using var activity = DataProtectionDiagnostics.ActivitySource.StartActivity("DataProtector.Encrypt");
-        if (DataProtectionDiagnostics.EnableSensitiveLogging)
-            DataProtectionDiagnostics.LogSensitiveOperation(activity, "DataProtector.Encrypt",
-                ("name", name), ("plaintextLength", plaintext.Length));
+        using var activity = HkdfGuardTelemetry.DataProtection.ActivitySource.StartActivity(ActivityNames.DataProtection.ProtectorEncrypt);
+        if (HkdfGuardTelemetry.DataProtection.EnableSensitiveLogging)
+            HkdfGuardTelemetry.DataProtection.LogSensitiveOperation(activity, ActivityNames.DataProtection.ProtectorEncrypt,
+                (AttributeNames.Name, name), (AttributeNames.PlaintextLength, plaintext.Length));
 
         try
         {
@@ -48,7 +48,7 @@ internal sealed class DataProtector(
         }
         catch (Exception ex)
         {
-            DataProtectionDiagnostics.RecordException(activity, ex);
+            HkdfGuardTelemetry.DataProtection.RecordException(activity, ex);
             throw;
         }
     }
@@ -56,10 +56,10 @@ internal sealed class DataProtector(
     /// <inheritdoc/>
     public int Decrypt(ReadOnlySpan<char> encrypted, Span<char> result)
     {
-        using var activity = DataProtectionDiagnostics.ActivitySource.StartActivity("DataProtector.Decrypt");
-        if (DataProtectionDiagnostics.EnableSensitiveLogging)
-            DataProtectionDiagnostics.LogSensitiveOperation(activity, "DataProtector.Decrypt",
-                ("name", name), ("encryptedLength", encrypted.Length));
+        using var activity = HkdfGuardTelemetry.DataProtection.ActivitySource.StartActivity(ActivityNames.DataProtection.ProtectorDecrypt);
+        if (HkdfGuardTelemetry.DataProtection.EnableSensitiveLogging)
+            HkdfGuardTelemetry.DataProtection.LogSensitiveOperation(activity, ActivityNames.DataProtection.ProtectorDecrypt,
+                (AttributeNames.Name, name), (AttributeNames.EncryptedLength, encrypted.Length));
 
         try
         {
@@ -81,7 +81,7 @@ internal sealed class DataProtector(
         }
         catch (Exception ex)
         {
-            DataProtectionDiagnostics.RecordException(activity, ex);
+            HkdfGuardTelemetry.DataProtection.RecordException(activity, ex);
             throw;
         }
     }

@@ -3,6 +3,7 @@ using HkdfGuard.Abstractions;
 using HkdfGuard.CryptoSession.AesGcm256;
 using HkdfGuard.DataEncryptionKey.FormatProvider;
 using HkdfGuard.DataEncryptionKey;
+using HkdfGuard.Diagnostics;
 using HkdfGuard.EncryptedConfiguration.Test.TestHelpers;
 using Microsoft.Extensions.Configuration;
 
@@ -150,10 +151,10 @@ public class ProtectedConfigurationRootTests
     [Fact]
     public void Decrypt_WithSensitiveLoggingEnabled_StillRoundTrips()
     {
-        var original = EncryptedConfigurationDiagnostics.EnableSensitiveLogging;
+        var original = HkdfGuardTelemetry.EncryptedConfiguration.EnableSensitiveLogging;
         try
         {
-            EncryptedConfigurationDiagnostics.EnableSensitiveLogging = true;
+            HkdfGuardTelemetry.EncryptedConfiguration.EnableSensitiveLogging = true;
 
             var keyRing = CreateKeyRing();
             var sut = CreateSut(keyRing, out _, ("Secret", "top secret"));
@@ -170,7 +171,7 @@ public class ProtectedConfigurationRootTests
         }
         finally
         {
-            EncryptedConfigurationDiagnostics.EnableSensitiveLogging = original;
+            HkdfGuardTelemetry.EncryptedConfiguration.EnableSensitiveLogging = original;
         }
     }
 

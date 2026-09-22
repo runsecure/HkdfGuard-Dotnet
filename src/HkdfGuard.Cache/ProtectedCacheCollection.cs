@@ -1,4 +1,5 @@
 using HkdfGuard.Abstractions;
+using HkdfGuard.Diagnostics;
 
 namespace HkdfGuard.Cache;
 
@@ -30,9 +31,9 @@ public sealed class ProtectedCacheCollection : IProtectedReadOnlyCache
     /// <inheritdoc/>
     public int Decrypt(string name, Span<byte> result)
     {
-        using var activity = CacheDiagnostics.ActivitySource.StartActivity("ProtectedCacheCollection.Decrypt");
-        if (CacheDiagnostics.EnableSensitiveLogging)
-            CacheDiagnostics.LogSensitiveOperation(activity, "ProtectedCacheCollection.Decrypt", ("name", name));
+        using var activity = HkdfGuardTelemetry.Cache.ActivitySource.StartActivity(ActivityNames.Cache.Decrypt);
+        if (HkdfGuardTelemetry.Cache.EnableSensitiveLogging)
+            HkdfGuardTelemetry.Cache.LogSensitiveOperation(activity, ActivityNames.Cache.Decrypt, (AttributeNames.Name, name));
 
         try
         {
@@ -47,7 +48,7 @@ public sealed class ProtectedCacheCollection : IProtectedReadOnlyCache
         }
         catch (Exception ex)
         {
-            CacheDiagnostics.RecordException(activity, ex);
+            HkdfGuardTelemetry.Cache.RecordException(activity, ex);
             throw;
         }
     }
@@ -55,9 +56,9 @@ public sealed class ProtectedCacheCollection : IProtectedReadOnlyCache
     /// <inheritdoc/>
     public int Decrypt(string name, Span<char> result)
     {
-        using var activity = CacheDiagnostics.ActivitySource.StartActivity("ProtectedCacheCollection.Decrypt");
-        if (CacheDiagnostics.EnableSensitiveLogging)
-            CacheDiagnostics.LogSensitiveOperation(activity, "ProtectedCacheCollection.Decrypt", ("name", name));
+        using var activity = HkdfGuardTelemetry.Cache.ActivitySource.StartActivity(ActivityNames.Cache.Decrypt);
+        if (HkdfGuardTelemetry.Cache.EnableSensitiveLogging)
+            HkdfGuardTelemetry.Cache.LogSensitiveOperation(activity, ActivityNames.Cache.Decrypt, (AttributeNames.Name, name));
 
         try
         {
@@ -72,7 +73,7 @@ public sealed class ProtectedCacheCollection : IProtectedReadOnlyCache
         }
         catch (Exception ex)
         {
-            CacheDiagnostics.RecordException(activity, ex);
+            HkdfGuardTelemetry.Cache.RecordException(activity, ex);
             throw;
         }
     }

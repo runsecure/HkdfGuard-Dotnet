@@ -12,6 +12,7 @@
     <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="$(CoreLibVersion)" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="$(CoreLibVersion)" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="$(CoreLibVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="$(CoreLibVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Options" Version="$(CoreLibVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="$(CoreLibVersion)" />
 

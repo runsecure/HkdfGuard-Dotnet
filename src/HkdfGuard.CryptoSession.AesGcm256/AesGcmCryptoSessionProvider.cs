@@ -1,5 +1,5 @@
 using HkdfGuard.Abstractions;
-using HkdfGuard.CryptoSession.AesGcm256.Diagnostics;
+using HkdfGuard.Diagnostics;
 
 namespace HkdfGuard.CryptoSession.AesGcm256;
 
@@ -67,14 +67,14 @@ public sealed class AesGcmCryptoSessionProvider : ICryptoSessionProvider
     // correctly surfaces the failure to whichever caller next needs a session.
     private void BackgroundRefresh()
     {
-        using var activity = AesGcm256Diagnostics.ActivitySource.StartActivity("AesGcmCryptoSessionProvider.BackgroundRefresh");
+        using var activity = HkdfGuardTelemetry.CryptoSessionAesGcm256.ActivitySource.StartActivity(ActivityNames.CryptoSessionAesGcm256.BackgroundRefresh);
         try
         {
             Refresh();
         }
         catch (Exception ex)
         {
-            AesGcm256Diagnostics.RecordException(activity, ex);
+            HkdfGuardTelemetry.CryptoSessionAesGcm256.RecordException(activity, ex);
         }
     }
 

@@ -3,6 +3,7 @@ using HkdfGuard.Abstractions;
 using HkdfGuard.Cache.Test.TestHelpers;
 using HkdfGuard.CryptoSession.AesGcm256;
 using HkdfGuard.DataEncryptionKey;
+using HkdfGuard.Diagnostics;
 
 namespace HkdfGuard.Cache.Test;
 
@@ -181,10 +182,10 @@ public class ProtectedCacheCollectionTests
     [Fact]
     public void Decrypt_Bytes_WithSensitiveLoggingEnabled_StillRoundTrips()
     {
-        var original = CacheDiagnostics.EnableSensitiveLogging;
+        var original = HkdfGuardTelemetry.Cache.EnableSensitiveLogging;
         try
         {
-            CacheDiagnostics.EnableSensitiveLogging = true;
+            HkdfGuardTelemetry.Cache.EnableSensitiveLogging = true;
 
             var source = CreateCache();
             source.Add("item", "top secret"u8.ToArray());
@@ -198,17 +199,17 @@ public class ProtectedCacheCollectionTests
         }
         finally
         {
-            CacheDiagnostics.EnableSensitiveLogging = original;
+            HkdfGuardTelemetry.Cache.EnableSensitiveLogging = original;
         }
     }
 
     [Fact]
     public void Decrypt_Chars_WithSensitiveLoggingEnabled_StillRoundTrips()
     {
-        var original = CacheDiagnostics.EnableSensitiveLogging;
+        var original = HkdfGuardTelemetry.Cache.EnableSensitiveLogging;
         try
         {
-            CacheDiagnostics.EnableSensitiveLogging = true;
+            HkdfGuardTelemetry.Cache.EnableSensitiveLogging = true;
 
             var source = CreateCache();
             source.Add("item", "top secret".ToCharArray());
@@ -222,7 +223,7 @@ public class ProtectedCacheCollectionTests
         }
         finally
         {
-            CacheDiagnostics.EnableSensitiveLogging = original;
+            HkdfGuardTelemetry.Cache.EnableSensitiveLogging = original;
         }
     }
 

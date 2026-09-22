@@ -48,12 +48,14 @@ tracking and purpose-scoped Additional Authenticated Data (AAD).
 
 | Project | Purpose |
 |---|---|
-| `HkdfGuard.Abstractions` | Interfaces and pure data types only (`IKeyWrapper`, `ICryptoSession`, `ICryptoSessionProvider`, `IDataProtectionKey`, `IDataProtector`, `IEncryptedFormatProvider`, `KeyTrackingValue`, `ArrayUtility`, `HkdfDiagnostics` - the shared `ActivitySource`/`EnableSensitiveLogging` flag `HkdfGuard.Cache`/`DataEncryptionKey`/`EncryptedConfiguration`'s own Diagnostics wrappers delegate to). No dependency on any other project in this solution, so it can be reused independently. |
-| `HkdfGuard.CryptoSession.AesGcm256` | `AesGcmCryptoSession` (internal - an `ICryptoSession`, key-bound at construction) and the public `AesGcmCryptoSessionProvider` (an `ICryptoSessionProvider` that reveals/refreshes it from an `IKeyWrapper` + wrapped bytes, and is the sole place the 1-300 second expiry range is validated - the provider only ever holds one active session at a time). Depends only on `HkdfGuard.Abstractions`; its own `AesGcm256Diagnostics` is standalone rather than sharing `HkdfDiagnostics`. |
+| `HkdfGuard.Diagnostics` | Every library's telemetry, centralized: `HkdfGuardTelemetry` (one `ComponentTelemetry` per component - `ActivitySource`, `Meter`, `EnableSensitiveLogging`, `RecordException`, `LogSensitiveOperation`), `ActivityNames`/`AttributeNames`/`EventNames`/`MetricNames` (OpenTelemetry semantic-convention-style names, e.g. `hkdfguard.cache.add`), `CacheMetrics`, and `HkdfGuardLoggerExtensions` (`[LoggerMessage]`-generated `ILogger` extensions). No dependency on any other project in this solution - the lowest layer, designed so its naming/shape can be ported identically into a Java/Node/Python/Go implementation. |
+| `HkdfGuard.Abstractions` | Interfaces and pure data types only (`IKeyWrapper`, `ICryptoSession`, `ICryptoSessionProvider`, `IDataProtectionKey`, `IDataProtector`, `IEncryptedFormatProvider`, `KeyTrackingValue`, `ArrayUtility`, `ProtectedCacheBase`). Depends only on `HkdfGuard.Diagnostics`. |
+| `HkdfGuard.CryptoSession.AesGcm256` | `AesGcmCryptoSession` (internal - an `ICryptoSession`, key-bound at construction) and the public `AesGcmCryptoSessionProvider` (an `ICryptoSessionProvider` that reveals/refreshes it from an `IKeyWrapper` + wrapped bytes, and is the sole place the 1-300 second expiry range is validated - the provider only ever holds one active session at a time). Depends on `HkdfGuard.Abstractions`/`HkdfGuard.Diagnostics`; its `HkdfGuardTelemetry.CryptoSessionAesGcm256` component keeps its own independent `EnableSensitiveLogging` flag rather than sharing `Root`'s. |
 | `HkdfGuard.KeyWrapping.V1` | `NativeHkdfKeyWrapperV1` (an `IKeyWrapper`) and `NativeHost`, which resolve and bind the current OS's native KMS library (Linux/.so, macOS/.dylib, Windows/.dll - see `Interop/`) to wrap and unwrap a 32-byte DEK under a service-identified KEK held entirely outside this process. |
 | `HkdfGuard.DataEncryptionKey` | The application-facing API: `KeyRing`/`KeyRingBuilder`, `IDataProtector`/`DataProtector`, `KeyWrappedDataEncryptionKey`, `EphemeralDataEncryptionKey`, `PipelineDataEncryptionKey`, and the default `enc::v{version}::{base64}` wire format. |
 | `HkdfGuard.DependencyInjection` | `AddKeyRing` - registers a `KeyRing` into an `IServiceCollection`, built lazily on first resolution. |
-| `HkdfGuard.Abstractions.Test`, `HkdfGuard.CryptoSession.AesGcm256.Test`, `HkdfGuard.DataEncryptionKey.Test`, `HkdfGuard.DependencyInjection.Test` | xUnit test suites, maintained at full line/branch coverage for their respective projects. |
+| `HkdfGuard.Options` | `HkdfGuardOptions`/`HkdfGuardOptionsValidator`/`HkdfGuardOptionsExtensions.ApplyTo` - a plain-data mirror of `KeyRingBuilder`'s configuration surface, for binding a `KeyRing`'s identity/policy/key files from configuration. |
+| `HkdfGuard.Diagnostics.Test`, `HkdfGuard.Abstractions.Test`, `HkdfGuard.CryptoSession.AesGcm256.Test`, `HkdfGuard.DataEncryptionKey.Test`, `HkdfGuard.DependencyInjection.Test`, `HkdfGuard.Options.Test` | xUnit test suites, maintained at full line/branch coverage for their respective projects. |
 
 Requires **.NET 10** (`net10.0`).
 
@@ -174,13 +176,26 @@ Disposing a `PipelineDataEncryptionKey` zeroes its DEK.
 
 ## Diagnostics
 
-Both `HkdfGuard.Abstractions` (`HkdfDiagnostics`) and `HkdfGuard.DataEncryptionKey`
-(`DataProtectionDiagnostics`) expose an `ActivitySource` and a shared `EnableSensitiveLogging`
-flag. `HkdfGuard.KeyWrapping.V1` (`TrustedModuleDiagnostics`) and
-`HkdfGuard.CryptoSession.AesGcm256` (`AesGcm256Diagnostics`) each expose their own, independent
-`ActivitySource`/flag rather than sharing it. When enabled, operations emit debug events carrying only non-sensitive metadata
-(lengths, versions, identifiers) - raw key, plaintext, and ciphertext bytes are never logged,
-regardless of this setting.
+All telemetry lives in `HkdfGuard.Diagnostics`. `HkdfGuardTelemetry` exposes one
+`ComponentTelemetry` per component (`Root`, `Cache`, `DataProtection`, `EncryptedConfiguration`,
+`CryptoSessionAesGcm256`, `KeyWrapping`), each with its own `ActivitySource`/`Meter` and an
+`EnableSensitiveLogging` flag - `Root`/`Cache`/`DataProtection`/`EncryptedConfiguration` share one
+flag; `CryptoSessionAesGcm256` and `KeyWrapping` each keep their own, independent flag. When
+enabled, operations emit a fixed-name `hkdfguard.sensitive_operation` debug event carrying only
+non-sensitive metadata (lengths, versions, identifiers) as attributes - raw key, plaintext, and
+ciphertext bytes are never logged, regardless of this setting.
+
+Span, event, attribute, and metric names all follow OpenTelemetry semantic-convention style -
+lowercase, dot-separated (e.g. `hkdfguard.cache.add`, attribute `hkdfguard.plaintext_length`) - see
+`ActivityNames`/`AttributeNames`/`EventNames`/`MetricNames`. This naming is the part of the design
+meant to translate identically into a future Java/Node/Python/Go port's own OpenTelemetry SDK.
+
+`ProtectedCache` is the pattern class for this project's newer metrics/logging extension points:
+it accepts an optional, nullable `ILogger<ProtectedCache>` (via `HkdfGuardLoggerExtensions`'
+source-generated `[LoggerMessage]` methods) alongside its existing `Activity` telemetry, and
+increments `CacheMetrics.Operations` (a `Counter<long>` on `HkdfGuardTelemetry.Cache.Meter`) on
+every Add/AddOrUpdate. Rolling the same optional-logger/metrics pattern out to every other
+component is deliberate future work, not yet done everywhere.
 
 ## Testing
 

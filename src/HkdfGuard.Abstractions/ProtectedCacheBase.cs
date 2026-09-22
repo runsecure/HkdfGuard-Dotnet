@@ -1,8 +1,8 @@
 using System.Collections.Concurrent;
 using System.Text;
-using HkdfGuard.Abstractions;
+using HkdfGuard.Diagnostics;
 
-namespace HkdfGuard.Cache;
+namespace HkdfGuard.Abstractions;
 
 /// <summary>
 /// Shared IProtectedReadOnlyCache plumbing for every cache in this library: a single
@@ -35,9 +35,9 @@ public abstract class ProtectedCacheBase(IDataProtectionKey dataProtectionKey) :
     /// <inheritdoc/>
     public int Decrypt(string name, Span<byte> result)
     {
-        using var activity = CacheDiagnostics.ActivitySource.StartActivity($"{GetType().Name}.Decrypt");
-        if (CacheDiagnostics.EnableSensitiveLogging)
-            CacheDiagnostics.LogSensitiveOperation(activity, $"{GetType().Name}.Decrypt", ("name", name));
+        using var activity = HkdfGuardTelemetry.Root.ActivitySource.StartActivity(ActivityNames.Cache.Decrypt);
+        if (HkdfGuardTelemetry.Root.EnableSensitiveLogging)
+            HkdfGuardTelemetry.Root.LogSensitiveOperation(activity, ActivityNames.Cache.Decrypt, (AttributeNames.Name, name));
 
         try
         {
@@ -48,7 +48,7 @@ public abstract class ProtectedCacheBase(IDataProtectionKey dataProtectionKey) :
         }
         catch (Exception ex)
         {
-            CacheDiagnostics.RecordException(activity, ex);
+            HkdfGuardTelemetry.Root.RecordException(activity, ex);
             throw;
         }
     }
@@ -56,9 +56,9 @@ public abstract class ProtectedCacheBase(IDataProtectionKey dataProtectionKey) :
     /// <inheritdoc/>
     public int Decrypt(string name, Span<char> result)
     {
-        using var activity = CacheDiagnostics.ActivitySource.StartActivity($"{GetType().Name}.Decrypt");
-        if (CacheDiagnostics.EnableSensitiveLogging)
-            CacheDiagnostics.LogSensitiveOperation(activity, $"{GetType().Name}.Decrypt", ("name", name));
+        using var activity = HkdfGuardTelemetry.Root.ActivitySource.StartActivity(ActivityNames.Cache.Decrypt);
+        if (HkdfGuardTelemetry.Root.EnableSensitiveLogging)
+            HkdfGuardTelemetry.Root.LogSensitiveOperation(activity, ActivityNames.Cache.Decrypt, (AttributeNames.Name, name));
 
         try
         {
@@ -80,7 +80,7 @@ public abstract class ProtectedCacheBase(IDataProtectionKey dataProtectionKey) :
         }
         catch (Exception ex)
         {
-            CacheDiagnostics.RecordException(activity, ex);
+            HkdfGuardTelemetry.Root.RecordException(activity, ex);
             throw;
         }
     }

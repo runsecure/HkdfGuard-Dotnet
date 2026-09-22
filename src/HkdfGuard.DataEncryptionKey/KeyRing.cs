@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
-using HkdfGuard.DataEncryptionKey.Diagnostics;
 using HkdfGuard.DataEncryptionKey.Protector;
 using HkdfGuard.Abstractions;
+using HkdfGuard.Diagnostics;
 
 namespace HkdfGuard.DataEncryptionKey;
 
@@ -52,7 +52,7 @@ public sealed class KeyRing(IEncryptedFormatProvider formatProvider)
     /// <exception cref="ArgumentException">A key for this version is already registered</exception>
     public void Add(int version, IDataProtectionKey key)
     {
-        using var activity = DataProtectionDiagnostics.ActivitySource.StartActivity("KeyRing.Add");
+        using var activity = HkdfGuardTelemetry.DataProtection.ActivitySource.StartActivity(ActivityNames.DataProtection.KeyRingAdd);
 
         _addGate.Wait();
         try
@@ -64,13 +64,13 @@ public sealed class KeyRing(IEncryptedFormatProvider formatProvider)
             if (becameCurrent)
                 _currentVersion = version;
 
-            if (DataProtectionDiagnostics.EnableSensitiveLogging)
-                DataProtectionDiagnostics.LogSensitiveOperation(activity, "KeyRing.Add",
-                    ("version", version), ("becameCurrent", becameCurrent));
+            if (HkdfGuardTelemetry.DataProtection.EnableSensitiveLogging)
+                HkdfGuardTelemetry.DataProtection.LogSensitiveOperation(activity, ActivityNames.DataProtection.KeyRingAdd,
+                    (AttributeNames.KeyVersion, version), (AttributeNames.KeyRingBecameCurrent, becameCurrent));
         }
         catch (Exception ex)
         {
-            DataProtectionDiagnostics.RecordException(activity, ex);
+            HkdfGuardTelemetry.DataProtection.RecordException(activity, ex);
             throw;
         }
         finally
@@ -91,8 +91,8 @@ public sealed class KeyRing(IEncryptedFormatProvider formatProvider)
             return key;
 
         var notFound = new KeyNotFoundException($"No key is registered for version {version}.");
-        using var activity = DataProtectionDiagnostics.ActivitySource.StartActivity("KeyRing.Get");
-        DataProtectionDiagnostics.RecordException(activity, notFound);
+        using var activity = HkdfGuardTelemetry.DataProtection.ActivitySource.StartActivity(ActivityNames.DataProtection.KeyRingGet);
+        HkdfGuardTelemetry.DataProtection.RecordException(activity, notFound);
         throw notFound;
     }
 
@@ -123,8 +123,8 @@ public sealed class KeyRing(IEncryptedFormatProvider formatProvider)
         }
         catch (InvalidOperationException ex)
         {
-            using var activity = DataProtectionDiagnostics.ActivitySource.StartActivity("KeyRing.GetCurrent");
-            DataProtectionDiagnostics.RecordException(activity, ex);
+            using var activity = HkdfGuardTelemetry.DataProtection.ActivitySource.StartActivity(ActivityNames.DataProtection.KeyRingGetCurrent);
+            HkdfGuardTelemetry.DataProtection.RecordException(activity, ex);
             throw;
         }
     }

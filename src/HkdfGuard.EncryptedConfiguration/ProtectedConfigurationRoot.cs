@@ -1,6 +1,7 @@
 using System.Text;
 using HkdfGuard.Abstractions;
 using HkdfGuard.DataEncryptionKey;
+using HkdfGuard.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Primitives;
 
@@ -49,9 +50,9 @@ public sealed class ProtectedConfigurationRoot(IConfigurationRoot configurationR
     /// <inheritdoc/>
     public int Decrypt(string name, Span<char> result)
     {
-        using var activity = EncryptedConfigurationDiagnostics.ActivitySource.StartActivity("ProtectedConfigurationRoot.Decrypt");
-        if (EncryptedConfigurationDiagnostics.EnableSensitiveLogging)
-            EncryptedConfigurationDiagnostics.LogSensitiveOperation(activity, "ProtectedConfigurationRoot.Decrypt", ("name", name));
+        using var activity = HkdfGuardTelemetry.EncryptedConfiguration.ActivitySource.StartActivity(ActivityNames.EncryptedConfiguration.Decrypt);
+        if (HkdfGuardTelemetry.EncryptedConfiguration.EnableSensitiveLogging)
+            HkdfGuardTelemetry.EncryptedConfiguration.LogSensitiveOperation(activity, ActivityNames.EncryptedConfiguration.Decrypt, (AttributeNames.Name, name));
 
         try
         {
@@ -63,7 +64,7 @@ public sealed class ProtectedConfigurationRoot(IConfigurationRoot configurationR
         }
         catch (Exception ex)
         {
-            EncryptedConfigurationDiagnostics.RecordException(activity, ex);
+            HkdfGuardTelemetry.EncryptedConfiguration.RecordException(activity, ex);
             throw;
         }
     }
@@ -71,9 +72,9 @@ public sealed class ProtectedConfigurationRoot(IConfigurationRoot configurationR
     /// <inheritdoc/>
     public int Decrypt(string name, Span<byte> result)
     {
-        using var activity = EncryptedConfigurationDiagnostics.ActivitySource.StartActivity("ProtectedConfigurationRoot.Decrypt");
-        if (EncryptedConfigurationDiagnostics.EnableSensitiveLogging)
-            EncryptedConfigurationDiagnostics.LogSensitiveOperation(activity, "ProtectedConfigurationRoot.Decrypt", ("name", name));
+        using var activity = HkdfGuardTelemetry.EncryptedConfiguration.ActivitySource.StartActivity(ActivityNames.EncryptedConfiguration.Decrypt);
+        if (HkdfGuardTelemetry.EncryptedConfiguration.EnableSensitiveLogging)
+            HkdfGuardTelemetry.EncryptedConfiguration.LogSensitiveOperation(activity, ActivityNames.EncryptedConfiguration.Decrypt, (AttributeNames.Name, name));
 
         try
         {
@@ -97,7 +98,7 @@ public sealed class ProtectedConfigurationRoot(IConfigurationRoot configurationR
         }
         catch (Exception ex)
         {
-            EncryptedConfigurationDiagnostics.RecordException(activity, ex);
+            HkdfGuardTelemetry.EncryptedConfiguration.RecordException(activity, ex);
             throw;
         }
     }

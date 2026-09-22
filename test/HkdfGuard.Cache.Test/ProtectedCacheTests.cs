@@ -1,9 +1,12 @@
+using System.Diagnostics.Metrics;
 using System.Security.Cryptography;
 using System.Text;
 using HkdfGuard.Abstractions;
 using HkdfGuard.Cache.Test.TestHelpers;
 using HkdfGuard.CryptoSession.AesGcm256;
 using HkdfGuard.DataEncryptionKey;
+using HkdfGuard.Diagnostics;
+using Microsoft.Extensions.Logging;
 
 namespace HkdfGuard.Cache.Test;
 
@@ -235,10 +238,10 @@ public class ProtectedCacheTests
     [Fact]
     public void AddDecrypt_WithSensitiveLoggingEnabled_StillRoundTrips()
     {
-        var original = CacheDiagnostics.EnableSensitiveLogging;
+        var original = HkdfGuardTelemetry.Cache.EnableSensitiveLogging;
         try
         {
-            CacheDiagnostics.EnableSensitiveLogging = true;
+            HkdfGuardTelemetry.Cache.EnableSensitiveLogging = true;
 
             var cache = CreateCache();
             var plaintext = "top secret"u8.ToArray();
@@ -253,17 +256,17 @@ public class ProtectedCacheTests
         }
         finally
         {
-            CacheDiagnostics.EnableSensitiveLogging = original;
+            HkdfGuardTelemetry.Cache.EnableSensitiveLogging = original;
         }
     }
 
     [Fact]
     public void AddOrUpdateDecrypt_Chars_WithSensitiveLoggingEnabled_StillRoundTrips()
     {
-        var original = CacheDiagnostics.EnableSensitiveLogging;
+        var original = HkdfGuardTelemetry.Cache.EnableSensitiveLogging;
         try
         {
-            CacheDiagnostics.EnableSensitiveLogging = true;
+            HkdfGuardTelemetry.Cache.EnableSensitiveLogging = true;
 
             var cache = CreateCache();
             const string plaintext = "top secret chars";
@@ -277,17 +280,17 @@ public class ProtectedCacheTests
         }
         finally
         {
-            CacheDiagnostics.EnableSensitiveLogging = original;
+            HkdfGuardTelemetry.Cache.EnableSensitiveLogging = original;
         }
     }
 
     [Fact]
     public void Add_Chars_WithSensitiveLoggingEnabled_StillRoundTrips()
     {
-        var original = CacheDiagnostics.EnableSensitiveLogging;
+        var original = HkdfGuardTelemetry.Cache.EnableSensitiveLogging;
         try
         {
-            CacheDiagnostics.EnableSensitiveLogging = true;
+            HkdfGuardTelemetry.Cache.EnableSensitiveLogging = true;
 
             var cache = CreateCache();
             const string plaintext = "top secret chars";
@@ -301,17 +304,17 @@ public class ProtectedCacheTests
         }
         finally
         {
-            CacheDiagnostics.EnableSensitiveLogging = original;
+            HkdfGuardTelemetry.Cache.EnableSensitiveLogging = original;
         }
     }
 
     [Fact]
     public void AddOrUpdate_Bytes_WithSensitiveLoggingEnabled_StillRoundTrips()
     {
-        var original = CacheDiagnostics.EnableSensitiveLogging;
+        var original = HkdfGuardTelemetry.Cache.EnableSensitiveLogging;
         try
         {
-            CacheDiagnostics.EnableSensitiveLogging = true;
+            HkdfGuardTelemetry.Cache.EnableSensitiveLogging = true;
 
             var cache = CreateCache();
             var plaintext = "top secret"u8.ToArray();
@@ -326,7 +329,7 @@ public class ProtectedCacheTests
         }
         finally
         {
-            CacheDiagnostics.EnableSensitiveLogging = original;
+            HkdfGuardTelemetry.Cache.EnableSensitiveLogging = original;
         }
     }
 
@@ -385,10 +388,10 @@ public class ProtectedCacheTests
     [Fact]
     public void Decrypt_Bytes_WithMissingName_AndSensitiveLoggingEnabled_StillReturnsZero()
     {
-        var original = CacheDiagnostics.EnableSensitiveLogging;
+        var original = HkdfGuardTelemetry.Cache.EnableSensitiveLogging;
         try
         {
-            CacheDiagnostics.EnableSensitiveLogging = true;
+            HkdfGuardTelemetry.Cache.EnableSensitiveLogging = true;
             var cache = CreateCache();
 
             var written = cache.Decrypt("missing", new byte[16]);
@@ -397,7 +400,7 @@ public class ProtectedCacheTests
         }
         finally
         {
-            CacheDiagnostics.EnableSensitiveLogging = original;
+            HkdfGuardTelemetry.Cache.EnableSensitiveLogging = original;
         }
     }
 
@@ -443,5 +446,93 @@ public class ProtectedCacheTests
         });
 
         Assert.Equal(1, succeeded);
+    }
+
+    [Fact]
+    public void Add_WithNullLogger_StillWorks()
+    {
+        var wrapper = new FakeKeyWrapper(RandomNumberGenerator.GetBytes(32));
+        var dataProtectionKey = new KeyWrappedDataEncryptionKey(new AesGcmCryptoSessionProvider(wrapper, "wrapped"u8.ToArray(), 60));
+        var cache = new ProtectedCache(dataProtectionKey, logger: null);
+
+        var exception = Record.Exception(() => cache.Add("item", "value"u8.ToArray()));
+
+        Assert.Null(exception);
+    }
+
+    [Fact]
+    public void Add_WithLoggerAndSensitiveLoggingEnabled_LogsSensitiveOperation()
+    {
+        var original = HkdfGuardTelemetry.Cache.EnableSensitiveLogging;
+        try
+        {
+            HkdfGuardTelemetry.Cache.EnableSensitiveLogging = true;
+
+            var wrapper = new FakeKeyWrapper(RandomNumberGenerator.GetBytes(32));
+            var dataProtectionKey = new KeyWrappedDataEncryptionKey(new AesGcmCryptoSessionProvider(wrapper, "wrapped"u8.ToArray(), 60));
+            var logger = new FakeLogger<ProtectedCache>();
+            var cache = new ProtectedCache(dataProtectionKey, logger);
+
+            cache.Add("item", "value"u8.ToArray());
+
+            var entry = Assert.Single(logger.Entries);
+            Assert.Equal(LogLevel.Debug, entry.Level);
+            Assert.Contains("item", entry.Message);
+        }
+        finally
+        {
+            HkdfGuardTelemetry.Cache.EnableSensitiveLogging = original;
+        }
+    }
+
+    [Fact]
+    public void Add_WithLoggerWhenDuplicateNameThrows_LogsOperationFailed()
+    {
+        var wrapper = new FakeKeyWrapper(RandomNumberGenerator.GetBytes(32));
+        var dataProtectionKey = new KeyWrappedDataEncryptionKey(new AesGcmCryptoSessionProvider(wrapper, "wrapped"u8.ToArray(), 60));
+        var logger = new FakeLogger<ProtectedCache>();
+        var cache = new ProtectedCache(dataProtectionKey, logger);
+        cache.Add("item", "first"u8.ToArray());
+
+        Assert.Throws<ArgumentException>(() => cache.Add("item", "second"u8.ToArray()));
+
+        var entry = Assert.Single(logger.Entries, e => e.Level == LogLevel.Error);
+        Assert.IsType<ArgumentException>(entry.Exception);
+    }
+
+    [Fact]
+    public void Add_IncrementsCacheOperationsCounter_OnSuccessAndFailure()
+    {
+        var measurements = new List<(long Value, string? Operation, string? Result)>();
+        using var meterListener = new MeterListener
+        {
+            InstrumentPublished = (instrument, listener) =>
+            {
+                if (instrument.Meter.Name == HkdfGuardTelemetry.Cache.SourceName && instrument.Name == MetricNames.Cache.Operations)
+                    listener.EnableMeasurementEvents(instrument);
+            },
+        };
+        meterListener.SetMeasurementEventCallback<long>((_, measurement, tags, _) =>
+        {
+            string? operation = null;
+            string? result = null;
+            foreach (var tag in tags)
+            {
+                if (tag.Key == AttributeNames.OperationName)
+                    operation = tag.Value?.ToString();
+                else if (tag.Key == AttributeNames.Result)
+                    result = tag.Value?.ToString();
+            }
+
+            measurements.Add((measurement, operation, result));
+        });
+        meterListener.Start();
+
+        var cache = CreateCache();
+        cache.Add("item", "value"u8.ToArray());
+        Assert.Throws<ArgumentException>(() => cache.Add("item", "value"u8.ToArray()));
+
+        Assert.Contains(measurements, m => m is (1, ActivityNames.Cache.Add, "success"));
+        Assert.Contains(measurements, m => m is (1, ActivityNames.Cache.Add, "error"));
     }
 }

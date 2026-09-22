@@ -1,5 +1,5 @@
-using HkdfGuard.DataEncryptionKey.Diagnostics;
 using HkdfGuard.Abstractions;
+using HkdfGuard.Diagnostics;
 
 namespace HkdfGuard.DataEncryptionKey;
 
@@ -23,10 +23,10 @@ public class KeyWrappedDataEncryptionKey(ICryptoSessionProvider sessionProvider)
     /// <inheritdoc/>
     public byte[] Encrypt(Span<byte> plaintext, ReadOnlySpan<byte> aad)
     {
-        using var activity = DataProtectionDiagnostics.ActivitySource.StartActivity("KeyWrappedDataEncryptionKey.Encrypt");
-        if (DataProtectionDiagnostics.EnableSensitiveLogging)
-            DataProtectionDiagnostics.LogSensitiveOperation(activity, "KeyWrappedDataEncryptionKey.Encrypt",
-                ("plaintextLength", plaintext.Length), ("aadLength", aad.Length));
+        using var activity = HkdfGuardTelemetry.DataProtection.ActivitySource.StartActivity(ActivityNames.DataProtection.KeyWrappedKeyEncrypt);
+        if (HkdfGuardTelemetry.DataProtection.EnableSensitiveLogging)
+            HkdfGuardTelemetry.DataProtection.LogSensitiveOperation(activity, ActivityNames.DataProtection.KeyWrappedKeyEncrypt,
+                (AttributeNames.PlaintextLength, plaintext.Length), (AttributeNames.AadLength, aad.Length));
 
         try
         {
@@ -37,7 +37,7 @@ public class KeyWrappedDataEncryptionKey(ICryptoSessionProvider sessionProvider)
         }
         catch (Exception ex)
         {
-            DataProtectionDiagnostics.RecordException(activity, ex);
+            HkdfGuardTelemetry.DataProtection.RecordException(activity, ex);
             throw;
         }
     }
@@ -49,10 +49,10 @@ public class KeyWrappedDataEncryptionKey(ICryptoSessionProvider sessionProvider)
     /// <inheritdoc/>
     public int Decrypt(ReadOnlySpan<byte> ciphertext, ReadOnlySpan<byte> aad, Span<byte> result)
     {
-        using var activity = DataProtectionDiagnostics.ActivitySource.StartActivity("KeyWrappedDataEncryptionKey.Decrypt");
-        if (DataProtectionDiagnostics.EnableSensitiveLogging)
-            DataProtectionDiagnostics.LogSensitiveOperation(activity, "KeyWrappedDataEncryptionKey.Decrypt",
-                ("ciphertextLength", ciphertext.Length), ("aadLength", aad.Length));
+        using var activity = HkdfGuardTelemetry.DataProtection.ActivitySource.StartActivity(ActivityNames.DataProtection.KeyWrappedKeyDecrypt);
+        if (HkdfGuardTelemetry.DataProtection.EnableSensitiveLogging)
+            HkdfGuardTelemetry.DataProtection.LogSensitiveOperation(activity, ActivityNames.DataProtection.KeyWrappedKeyDecrypt,
+                (AttributeNames.CiphertextLength, ciphertext.Length), (AttributeNames.AadLength, aad.Length));
 
         try
         {
@@ -61,7 +61,7 @@ public class KeyWrappedDataEncryptionKey(ICryptoSessionProvider sessionProvider)
         }
         catch (Exception ex)
         {
-            DataProtectionDiagnostics.RecordException(activity, ex);
+            HkdfGuardTelemetry.DataProtection.RecordException(activity, ex);
             throw;
         }
     }

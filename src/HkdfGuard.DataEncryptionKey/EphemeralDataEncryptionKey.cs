@@ -1,5 +1,5 @@
 using HkdfGuard.Abstractions;
-using HkdfGuard.DataEncryptionKey.Diagnostics;
+using HkdfGuard.Diagnostics;
 
 namespace HkdfGuard.DataEncryptionKey;
 
@@ -29,7 +29,7 @@ public sealed class EphemeralDataEncryptionKey : IDataProtectionKey
     /// </param>
     public EphemeralDataEncryptionKey(IKeyWrapper keyWrapper, Func<IKeyWrapper, byte[], ICryptoSessionProvider> sessionProviderFactory)
     {
-        using var activity = DataProtectionDiagnostics.ActivitySource.StartActivity("EphemeralDataEncryptionKey.Initialize");
+        using var activity = HkdfGuardTelemetry.DataProtection.ActivitySource.StartActivity(ActivityNames.DataProtection.EphemeralKeyInitialize);
         try
         {
             var buffer = new byte[MaxWrappedLength];
@@ -41,7 +41,7 @@ public sealed class EphemeralDataEncryptionKey : IDataProtectionKey
         }
         catch (Exception ex)
         {
-            DataProtectionDiagnostics.RecordException(activity, ex);
+            HkdfGuardTelemetry.DataProtection.RecordException(activity, ex);
             throw;
         }
     }
