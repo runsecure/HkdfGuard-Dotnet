@@ -55,7 +55,7 @@ tracking and purpose-scoped Additional Authenticated Data (AAD).
 | `HkdfGuard.DataEncryptionKey` | The application-facing API: `KeyRing`/`KeyRingBuilder`, `IDataProtector`/`DataProtector`, `KeyWrappedDataEncryptionKey`, `EphemeralDataEncryptionKey`, `PipelineDataEncryptionKey`, and the default `enc::v{version}::{base64}` wire format. |
 | `HkdfGuard.DependencyInjection` | `AddKeyRing` - registers a `KeyRing` into an `IServiceCollection`, built lazily on first resolution. |
 | `HkdfGuard.Options` | `HkdfGuardOptions`/`HkdfGuardOptionsValidator`/`HkdfGuardOptionsExtensions.ApplyTo` - a plain-data mirror of `KeyRingBuilder`'s configuration surface, for binding a `KeyRing`'s identity/policy/key files from configuration. |
-| `HkdfGuard.Diagnostics.Test`, `HkdfGuard.Abstractions.Test`, `HkdfGuard.CryptoSession.AesGcm256.Test`, `HkdfGuard.DataEncryptionKey.Test`, `HkdfGuard.DependencyInjection.Test`, `HkdfGuard.Options.Test` | xUnit test suites, maintained at full line/branch coverage for their respective projects. |
+| `HkdfGuard.Diagnostics.Test`, `HkdfGuard.Abstractions.Test`, `HkdfGuard.CryptoSession.AesGcm256.Test`, `HkdfGuard.KeyWrapping.V1.Test`, `HkdfGuard.DataEncryptionKey.Test`, `HkdfGuard.DependencyInjection.Test`, `HkdfGuard.Options.Test` | xUnit test suites, maintained at full line/branch coverage for their respective projects. |
 
 Requires **.NET 10** (`net10.0`).
 
