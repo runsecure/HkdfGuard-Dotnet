@@ -57,14 +57,13 @@ public sealed class ProtectedConfigurationRoot(IConfigurationRoot configurationR
         try
         {
             var value = configurationRoot[name];
-            if (value is null)
-                return 0;
-
-            return _protector.Decrypt(value, result);
+            return value is null 
+                ? 0 
+                : _protector.Decrypt(value, result);
         }
         catch (Exception ex)
         {
-            HkdfGuardTelemetry.EncryptedConfiguration.RecordException(activity, ex);
+            ComponentTelemetry.RecordException(activity, ex);
             throw;
         }
     }
@@ -98,7 +97,7 @@ public sealed class ProtectedConfigurationRoot(IConfigurationRoot configurationR
         }
         catch (Exception ex)
         {
-            HkdfGuardTelemetry.EncryptedConfiguration.RecordException(activity, ex);
+            ComponentTelemetry.RecordException(activity, ex);
             throw;
         }
     }

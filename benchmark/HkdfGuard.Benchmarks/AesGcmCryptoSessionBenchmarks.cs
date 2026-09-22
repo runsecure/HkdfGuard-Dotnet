@@ -18,7 +18,7 @@ namespace HkdfGuard.Benchmarks;
 /// and a larger payload (1 MiB) to show how per-call overhead versus per-byte throughput trade off.
 /// </summary>
 [MemoryDiagnoser]
-public class AesGcmCryptoSessionBenchmarks
+public class AesGcmCryptoSessionBenchmarks : IDisposable
 {
     private const int NonceSize = 12;
     private const int TagSize = 16;
@@ -26,7 +26,7 @@ public class AesGcmCryptoSessionBenchmarks
     [Params(64, 4096, 1_048_576)]
     public int PayloadSize { get; set; }
 
-    private ICryptoSessionProvider _sessionProvider = null!;
+    private ICryptoProvider _provider = null!;
     private byte[] _plaintextTemplate = null!;
     private byte[] _plaintextScratch = null!;
     private byte[] _encryptResult = null!;
@@ -37,7 +37,7 @@ public class AesGcmCryptoSessionBenchmarks
     public void GlobalSetup()
     {
         var keyWrapper = new FixedKeyWrapper(RandomNumberGenerator.GetBytes(32));
-        _sessionProvider = new AesGcmCryptoSessionProvider(keyWrapper, "wrapped"u8.ToArray(), 300);
+        _provider = new AesGcmCryptoProvider(keyWrapper, [.. "wrapped"u8], 300);
         _plaintextTemplate = RandomNumberGenerator.GetBytes(PayloadSize);
         _plaintextScratch = new byte[PayloadSize];
         _encryptResult = new byte[PayloadSize + NonceSize + TagSize];
@@ -47,19 +47,19 @@ public class AesGcmCryptoSessionBenchmarks
         // argument, so this buffer is safe to reuse across every Decrypt invocation.
         var plaintextForCiphertext = (byte[])_plaintextTemplate.Clone();
         _ciphertext = new byte[PayloadSize + NonceSize + TagSize];
-        _sessionProvider.GetSession().Encrypt(plaintextForCiphertext, _ciphertext);
+        _provider.Encrypt(plaintextForCiphertext, _ciphertext);
     }
 
     [Benchmark]
     public int Encrypt()
     {
         _plaintextTemplate.CopyTo(_plaintextScratch, 0);
-        return _sessionProvider.GetSession().Encrypt(_plaintextScratch, _encryptResult);
+        return _provider.Encrypt(_plaintextScratch, _encryptResult);
     }
 
     [Benchmark]
     public int Decrypt()
-        => _sessionProvider.GetSession().Decrypt(_ciphertext, _decryptResult);
+        => _provider.Decrypt(_ciphertext, _decryptResult);
 
     // Reveals the same fixed key regardless of the wrapped bytes passed in - isolates this
     // benchmark from real key-wrapping/unwrapping cost, which AesGcmCryptoSessionProvider only
@@ -67,7 +67,6 @@ public class AesGcmCryptoSessionBenchmarks
     private sealed class FixedKeyWrapper(byte[] key) : IKeyWrapper
     {
         public int Encrypt(Span<byte> plaintext, Span<byte> result) => throw new NotSupportedException();
-        public int Encrypt(Span<byte> plaintext, Span<byte> result, ReadOnlySpan<byte> aad) => throw new NotSupportedException();
 
         public int Decrypt(ReadOnlySpan<byte> wrapped, Span<byte> result)
         {
@@ -75,7 +74,11 @@ public class AesGcmCryptoSessionBenchmarks
             return key.Length;
         }
 
-        public int Decrypt(ReadOnlySpan<byte> wrapped, Span<byte> result, ReadOnlySpan<byte> aad) => Decrypt(wrapped, result);
         public int GenerateAndWrap(Span<byte> result) => throw new NotSupportedException();
+    }
+
+    public void Dispose()
+    {
+        _provider.Dispose();
     }
 }

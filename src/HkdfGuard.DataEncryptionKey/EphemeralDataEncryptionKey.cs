@@ -27,7 +27,7 @@ public sealed class EphemeralDataEncryptionKey : IDataProtectionKey
     /// Builds the ICryptoSessionProvider bound to keyWrapper and its freshly-generated wrapped
     /// payload - e.g. <c>(kw, wrapped) => new AesGcmCryptoSessionProvider(kw, wrapped, 60)</c>.
     /// </param>
-    public EphemeralDataEncryptionKey(IKeyWrapper keyWrapper, Func<IKeyWrapper, byte[], ICryptoSessionProvider> sessionProviderFactory)
+    public EphemeralDataEncryptionKey(IKeyWrapper keyWrapper, Func<IKeyWrapper, byte[], ICryptoProvider> sessionProviderFactory)
     {
         using var activity = HkdfGuardTelemetry.DataProtection.ActivitySource.StartActivity(ActivityNames.DataProtection.EphemeralKeyInitialize);
         try
@@ -41,7 +41,7 @@ public sealed class EphemeralDataEncryptionKey : IDataProtectionKey
         }
         catch (Exception ex)
         {
-            HkdfGuardTelemetry.DataProtection.RecordException(activity, ex);
+            ComponentTelemetry.RecordException(activity, ex);
             throw;
         }
     }

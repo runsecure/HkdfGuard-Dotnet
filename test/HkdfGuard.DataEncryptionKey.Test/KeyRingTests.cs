@@ -10,7 +10,7 @@ namespace HkdfGuard.DataEncryptionKey.Test;
 public class KeyRingTests
 {
     private static IDataProtectionKey CreateFakeKey()
-        => new KeyWrappedDataEncryptionKey(new AesGcmCryptoSessionProvider(new FakeKeyWrapper(RandomNumberGenerator.GetBytes(32)), "wrapped"u8.ToArray(), 60));
+        => new KeyWrappedDataEncryptionKey(new AesGcmCryptoProvider(new FakeKeyWrapper(RandomNumberGenerator.GetBytes(32)), "wrapped"u8.ToArray(), 60));
 
     [Fact]
     public void CurrentVersion_BeforeAnyAdd_ThrowsInvalidOperationException()

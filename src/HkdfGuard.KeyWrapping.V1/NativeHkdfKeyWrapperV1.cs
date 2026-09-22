@@ -33,45 +33,28 @@ public class NativeHkdfKeyWrapperV1 : IKeyWrapper
 
     /// <inheritdoc/>
     public int Encrypt(Span<byte> plaintext, Span<byte> result)
-        => Encrypt(plaintext, result, ReadOnlySpan<byte>.Empty);
-
-    /// <inheritdoc/>
-    public int Encrypt(Span<byte> plaintext, Span<byte> result, ReadOnlySpan<byte> aad)
     {
-        if (!aad.IsEmpty)
-            throw new NotSupportedException($"{nameof(NativeHkdfKeyWrapperV1)}'s native KMS library has no concept of additional authenticated data.");
-
         var status = _library.WrapDek(_serviceName, plaintext, result, out var bytesWritten);
-        if (status != AbstractHkdfGuardKmsLibrary.Ok)
-            throw new CryptographicException($"Native KMS wrap failed with status {status}.");
-
-        return bytesWritten;
+        return status == AbstractHkdfGuardKmsLibrary.Ok 
+            ? bytesWritten 
+            : throw new CryptographicException($"Native KMS wrap failed with status {status}.");
     }
 
     /// <inheritdoc/>
     public int Decrypt(ReadOnlySpan<byte> wrapped, Span<byte> result)
-        => Decrypt(wrapped, result, ReadOnlySpan<byte>.Empty);
-
-    /// <inheritdoc/>
-    public int Decrypt(ReadOnlySpan<byte> wrapped, Span<byte> result, ReadOnlySpan<byte> aad)
     {
-        if (!aad.IsEmpty)
-            throw new NotSupportedException($"{nameof(NativeHkdfKeyWrapperV1)}'s native KMS library has no concept of additional authenticated data.");
-
         var status = _library.UnwrapDek(_serviceName, wrapped, result, out var bytesWritten);
-        if (status != AbstractHkdfGuardKmsLibrary.Ok)
-            throw new CryptographicException($"Native KMS unwrap failed with status {status}.");
-
-        return bytesWritten;
+        return status == AbstractHkdfGuardKmsLibrary.Ok 
+            ? bytesWritten 
+            : throw new CryptographicException($"Native KMS unwrap failed with status {status}.");
     }
 
     /// <inheritdoc/>
     public int GenerateAndWrap(Span<byte> result)
     {
         var status = _library.GenerateAndWrapDek(_serviceName, result, out var bytesWritten);
-        if (status != AbstractHkdfGuardKmsLibrary.Ok)
-            throw new CryptographicException($"Native KMS generate-and-wrap failed with status {status}.");
-
-        return bytesWritten;
+        return status == AbstractHkdfGuardKmsLibrary.Ok 
+            ? bytesWritten 
+            : throw new CryptographicException($"Native KMS generate-and-wrap failed with status {status}.");
     }
 }

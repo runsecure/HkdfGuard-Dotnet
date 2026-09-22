@@ -1,5 +1,4 @@
 using System.Text;
-using HkdfGuard.DataEncryptionKey;
 using HkdfGuard.Abstractions;
 using HkdfGuard.Diagnostics;
 
@@ -48,7 +47,7 @@ internal sealed class DataProtector(
         }
         catch (Exception ex)
         {
-            HkdfGuardTelemetry.DataProtection.RecordException(activity, ex);
+            ComponentTelemetry.RecordException(activity, ex);
             throw;
         }
     }
@@ -81,7 +80,7 @@ internal sealed class DataProtector(
         }
         catch (Exception ex)
         {
-            HkdfGuardTelemetry.DataProtection.RecordException(activity, ex);
+            ComponentTelemetry.RecordException(activity, ex);
             throw;
         }
     }

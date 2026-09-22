@@ -14,7 +14,7 @@ public class ProtectedConfigurationRootTests
     private static KeyRing CreateKeyRing()
     {
         var ring = new KeyRing(new DefaultFormatProvider());
-        var key = new KeyWrappedDataEncryptionKey(new AesGcmCryptoSessionProvider(new FakeKeyWrapper(RandomNumberGenerator.GetBytes(32)), "wrapped"u8.ToArray(), 60));
+        var key = new KeyWrappedDataEncryptionKey(new AesGcmCryptoProvider(new FakeKeyWrapper(RandomNumberGenerator.GetBytes(32)), "wrapped"u8.ToArray(), 60));
         ring.Add(1, key);
         return ring;
     }

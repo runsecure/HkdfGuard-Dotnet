@@ -12,19 +12,10 @@ public interface IKeyWrapper
     /// <summary>
     /// Protects an encryption key
     /// </summary>
-    /// <param name="plaintext">The plain bytes to encrypt</param>
+    /// <param name="plaintext"></param>
     /// <param name="result">The encrypted key</param>
     /// <returns>Number of bytes written to the result</returns>
     public int Encrypt(Span<byte> plaintext, Span<byte> result);
-
-    /// <summary>
-    /// Protects an encryption key
-    /// </summary>
-    /// <param name="plaintext">The plain bytes to encrypt</param>
-    /// <param name="result">The encrypted key</param>
-    /// <param name="aad">Additional Auth Data for the encrypt operation</param>
-    /// <returns>Number of bytes written to the result</returns>
-    public int Encrypt(Span<byte> plaintext, Span<byte> result, ReadOnlySpan<byte> aad);
 
     /// <summary>
     /// Reveals a previously-wrapped key
@@ -33,15 +24,6 @@ public interface IKeyWrapper
     /// <param name="result">The decrypted key span</param>
     /// <returns>Number of bytes written to the result</returns>
     public int Decrypt(ReadOnlySpan<byte> wrapped, Span<byte> result);
-
-    /// <summary>
-    /// Reveals a previously-wrapped key
-    /// </summary>
-    /// <param name="wrapped">The wrapped key to reveal</param>
-    /// <param name="result">The decrypted key span</param>
-    /// <param name="aad">Additional Auth Data for decrypting the key</param>
-    /// <returns>Number of bytes written to the result</returns>
-    public int Decrypt(ReadOnlySpan<byte> wrapped, Span<byte> result, ReadOnlySpan<byte> aad);
 
     /// <summary>
     /// Generates a fresh key and immediately protects it against the same KEK this instance

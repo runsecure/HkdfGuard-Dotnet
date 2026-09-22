@@ -12,7 +12,7 @@ public class ProtectedCacheCollectionTests
     private static ProtectedCache CreateCache()
     {
         var wrapper = new FakeKeyWrapper(RandomNumberGenerator.GetBytes(32));
-        var dataProtectionKey = new KeyWrappedDataEncryptionKey(new AesGcmCryptoSessionProvider(wrapper, "wrapped"u8.ToArray(), 60));
+        var dataProtectionKey = new KeyWrappedDataEncryptionKey(new AesGcmCryptoProvider(wrapper, "wrapped"u8.ToArray(), 60));
         return new ProtectedCache(dataProtectionKey);
     }
 

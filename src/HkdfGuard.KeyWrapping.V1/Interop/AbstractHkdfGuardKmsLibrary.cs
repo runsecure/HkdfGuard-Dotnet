@@ -49,6 +49,7 @@ internal abstract class AbstractHkdfGuardKmsLibrary
     /// this boundary - recover it later via <see cref="UnwrapDek"/> with the same
     /// <paramref name="service"/>.
     /// </summary>
+    /// <param name="service">Service Name to use with KMS operations</param>
     /// <param name="destination">Buffer to receive the wrapped payload.</param>
     /// <param name="bytesWritten">
     /// On success, the number of bytes written to <paramref name="destination"/>. On a

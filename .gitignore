@@ -58,3 +58,6 @@ nunit-*.xml
 
 #idea IntelliJ files
 .idea/
+
+#dotnet user files
+*.user

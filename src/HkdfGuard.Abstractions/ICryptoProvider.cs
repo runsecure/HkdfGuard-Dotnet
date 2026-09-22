@@ -1,18 +1,13 @@
 namespace HkdfGuard.Abstractions;
 
 /// <summary>
-/// A live, key-bound symmetric-cipher session: the key is supplied once, at construction (not
-/// per-call), and this instance holds it - and whatever native resources the cipher needs - until
-/// Disposed. ExpiresAt marks when a caller (see ICryptoSessionProvider) should treat this session
-/// as stale and refresh it, rather than reuse it indefinitely.
+/// Tracks a single cached ICryptoSession, refreshing it (from a fresh key reveal/unwrap) once it
+/// expires, and disposing the outgoing session as it does. Callers should call GetSession on
+/// every operation rather than caching the returned ICryptoSession themselves, so they always see
+/// a non-expired one.
 /// </summary>
-public interface ICryptoSession : IDisposable
+public interface ICryptoProvider : IDisposable
 {
-    /// <summary>
-    /// The instant after which this session should no longer be reused.
-    /// </summary>
-    public DateTimeOffset ExpiresAt { get; }
-
     /// <summary>
     /// Encrypt the data
     /// </summary>

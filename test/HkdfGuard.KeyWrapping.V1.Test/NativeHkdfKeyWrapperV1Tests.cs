@@ -47,29 +47,12 @@ public class NativeHkdfKeyWrapperV1Tests
         var plaintext = new byte[] { 5, 6, 7 };
         var resultBuffer = new byte[8];
 
-        var bytesWritten = wrapper.Encrypt(plaintext.AsSpan(), resultBuffer.AsSpan(), ReadOnlySpan<byte>.Empty);
+        var bytesWritten = wrapper.Encrypt(plaintext.AsSpan(), resultBuffer.AsSpan());
 
         Assert.Equal(3, bytesWritten);
         Assert.Equal(1, fakeLibrary.WrapCallCount);
         Assert.Equal("service-b", fakeLibrary.LastService);
         Assert.Equal(plaintext, fakeLibrary.LastWrapPlaintext);
-    }
-
-    [Fact]
-    public void Encrypt_WithNonEmptyAad_ThrowsNotSupportedException()
-    {
-        var fakeLibrary = new FakeHkdfGuardKmsLibrary();
-        var wrapper = new NativeHkdfKeyWrapperV1("service-c", fakeLibrary);
-
-        var plaintext = new byte[] { 1, 2, 3 };
-        var resultBuffer = new byte[8];
-        var nonNullAad = new byte[] { 42 };
-
-        var exception = Assert.Throws<NotSupportedException>(() =>
-            wrapper.Encrypt(plaintext.AsSpan(), resultBuffer.AsSpan(), nonNullAad.AsSpan()));
-
-        Assert.Contains("additional authenticated data", exception.Message);
-        Assert.Equal(0, fakeLibrary.WrapCallCount);
     }
 
     [Theory]
@@ -127,29 +110,12 @@ public class NativeHkdfKeyWrapperV1Tests
         var wrapped = new byte[] { 99, 98, 97 };
         var resultBuffer = new byte[8];
 
-        var bytesWritten = wrapper.Decrypt(wrapped.AsSpan(), resultBuffer.AsSpan(), ReadOnlySpan<byte>.Empty);
+        var bytesWritten = wrapper.Decrypt(wrapped.AsSpan(), resultBuffer.AsSpan());
 
         Assert.Equal(3, bytesWritten);
         Assert.Equal(1, fakeLibrary.UnwrapCallCount);
         Assert.Equal("service-b", fakeLibrary.LastService);
         Assert.Equal(wrapped, fakeLibrary.LastUnwrapWrapped);
-    }
-
-    [Fact]
-    public void Decrypt_WithNonEmptyAad_ThrowsNotSupportedException()
-    {
-        var fakeLibrary = new FakeHkdfGuardKmsLibrary();
-        var wrapper = new NativeHkdfKeyWrapperV1("service-c", fakeLibrary);
-
-        var wrapped = new byte[] { 10, 20, 30 };
-        var resultBuffer = new byte[8];
-        var nonNullAad = new byte[] { 42 };
-
-        var exception = Assert.Throws<NotSupportedException>(() =>
-            wrapper.Decrypt(wrapped.AsSpan(), resultBuffer.AsSpan(), nonNullAad.AsSpan()));
-
-        Assert.Contains("additional authenticated data", exception.Message);
-        Assert.Equal(0, fakeLibrary.UnwrapCallCount);
     }
 
     [Theory]

@@ -48,7 +48,7 @@ public sealed class ProtectedCacheCollection : IProtectedReadOnlyCache
         }
         catch (Exception ex)
         {
-            HkdfGuardTelemetry.Cache.RecordException(activity, ex);
+            ComponentTelemetry.RecordException(activity, ex);
             throw;
         }
     }
@@ -73,7 +73,7 @@ public sealed class ProtectedCacheCollection : IProtectedReadOnlyCache
         }
         catch (Exception ex)
         {
-            HkdfGuardTelemetry.Cache.RecordException(activity, ex);
+            ComponentTelemetry.RecordException(activity, ex);
             throw;
         }
     }

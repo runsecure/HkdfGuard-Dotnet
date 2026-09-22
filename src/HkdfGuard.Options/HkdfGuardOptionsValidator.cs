@@ -28,6 +28,7 @@ public sealed class HkdfGuardOptionsValidator : IValidateOptions<HkdfGuardOption
         if (options.KeyFiles.Count == 0 && options.EphemeralKeys.Count == 0)
             failures.Add("At least one key file or ephemeral key is required.");
 
+        // ReSharper disable once ForeachCanBeConvertedToQueryUsingAnotherGetEnumerator
         foreach (var keyFile in options.KeyFiles)
         {
             if (string.IsNullOrWhiteSpace(keyFile.Path))

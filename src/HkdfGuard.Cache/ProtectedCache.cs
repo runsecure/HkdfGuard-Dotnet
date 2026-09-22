@@ -33,14 +33,14 @@ public sealed class ProtectedCache(IDataProtectionKey dataProtectionKey, ILogger
 
         try
         {
-            if (!Cache.TryAdd(name, Encrypt(plaintext)))
+            if (!Data.TryAdd(name, Encrypt(plaintext)))
                 throw new ArgumentException($"An item with the name '{name}' has already been added.", nameof(name));
 
             RecordOperation(ActivityNames.Cache.Add, success: true);
         }
         catch (Exception ex)
         {
-            HkdfGuardTelemetry.Cache.RecordException(activity, ex);
+            ComponentTelemetry.RecordException(activity, ex);
             logger?.OperationFailed(ActivityNames.Cache.Add, ex);
             RecordOperation(ActivityNames.Cache.Add, success: false);
             throw;
@@ -60,14 +60,14 @@ public sealed class ProtectedCache(IDataProtectionKey dataProtectionKey, ILogger
 
         try
         {
-            if (!Cache.TryAdd(name, EncryptChars(plaintext)))
+            if (!Data.TryAdd(name, EncryptChars(plaintext)))
                 throw new ArgumentException($"An item with the name '{name}' has already been added.", nameof(name));
 
             RecordOperation(ActivityNames.Cache.Add, success: true);
         }
         catch (Exception ex)
         {
-            HkdfGuardTelemetry.Cache.RecordException(activity, ex);
+            ComponentTelemetry.RecordException(activity, ex);
             logger?.OperationFailed(ActivityNames.Cache.Add, ex);
             RecordOperation(ActivityNames.Cache.Add, success: false);
             throw;
@@ -87,12 +87,12 @@ public sealed class ProtectedCache(IDataProtectionKey dataProtectionKey, ILogger
 
         try
         {
-            Cache[name] = Encrypt(plaintext);
+            Data[name] = Encrypt(plaintext);
             RecordOperation(ActivityNames.Cache.AddOrUpdate, success: true);
         }
         catch (Exception ex)
         {
-            HkdfGuardTelemetry.Cache.RecordException(activity, ex);
+            ComponentTelemetry.RecordException(activity, ex);
             logger?.OperationFailed(ActivityNames.Cache.AddOrUpdate, ex);
             RecordOperation(ActivityNames.Cache.AddOrUpdate, success: false);
             throw;
@@ -112,12 +112,12 @@ public sealed class ProtectedCache(IDataProtectionKey dataProtectionKey, ILogger
 
         try
         {
-            Cache[name] = EncryptChars(plaintext);
+            Data[name] = EncryptChars(plaintext);
             RecordOperation(ActivityNames.Cache.AddOrUpdate, success: true);
         }
         catch (Exception ex)
         {
-            HkdfGuardTelemetry.Cache.RecordException(activity, ex);
+            ComponentTelemetry.RecordException(activity, ex);
             logger?.OperationFailed(ActivityNames.Cache.AddOrUpdate, ex);
             RecordOperation(ActivityNames.Cache.AddOrUpdate, success: false);
             throw;

@@ -16,7 +16,6 @@ internal sealed class FakeKeyWrapper : IKeyWrapper
     public Exception? ThrowOnDecrypt { get; set; }
 
     public int Encrypt(Span<byte> plaintext, Span<byte> result) => throw new NotSupportedException();
-    public int Encrypt(Span<byte> plaintext, Span<byte> result, ReadOnlySpan<byte> aad) => throw new NotSupportedException();
 
     public int Decrypt(ReadOnlySpan<byte> wrapped, Span<byte> result)
     {
@@ -28,6 +27,5 @@ internal sealed class FakeKeyWrapper : IKeyWrapper
         return result.Length;
     }
 
-    public int Decrypt(ReadOnlySpan<byte> wrapped, Span<byte> result, ReadOnlySpan<byte> aad) => Decrypt(wrapped, result);
     public int GenerateAndWrap(Span<byte> result) => throw new NotSupportedException();
 }

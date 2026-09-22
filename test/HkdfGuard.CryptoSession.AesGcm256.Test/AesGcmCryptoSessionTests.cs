@@ -8,7 +8,7 @@ public class AesGcmCryptoSessionTests
     [Fact]
     public void EncryptDecrypt_RoundTrips()
     {
-        using var cipher = new AesGcmCryptoSession(RandomNumberGenerator.GetBytes(32), 60);
+        using var cipher = new AesGcmCryptoSession(RandomNumberGenerator.GetBytes(32));
         var plaintext = "hello world"u8.ToArray();
         var expectedPlaintext = (byte[])plaintext.Clone();
         var encrypted = new byte[plaintext.Length + 28];
@@ -26,7 +26,7 @@ public class AesGcmCryptoSessionTests
     [Fact]
     public void EncryptDecrypt_RoundTrips_WithAad()
     {
-        using var cipher = new AesGcmCryptoSession(RandomNumberGenerator.GetBytes(32), 60);
+        using var cipher = new AesGcmCryptoSession(RandomNumberGenerator.GetBytes(32));
         var plaintext = "hello world"u8.ToArray();
         var expectedPlaintext = (byte[])plaintext.Clone();
         var aad = "context"u8.ToArray();
@@ -43,7 +43,7 @@ public class AesGcmCryptoSessionTests
     [Fact]
     public void Decrypt_WithWrongAad_Throws()
     {
-        using var cipher = new AesGcmCryptoSession(RandomNumberGenerator.GetBytes(32), 60);
+        using var cipher = new AesGcmCryptoSession(RandomNumberGenerator.GetBytes(32));
         var plaintext = "hello world"u8.ToArray();
         var encrypted = new byte[plaintext.Length + 28];
         cipher.Encrypt(plaintext, "correct-aad"u8.ToArray(), encrypted);
@@ -56,7 +56,7 @@ public class AesGcmCryptoSessionTests
     [Fact]
     public void Decrypt_WithTamperedCiphertext_Throws()
     {
-        using var cipher = new AesGcmCryptoSession(RandomNumberGenerator.GetBytes(32), 60);
+        using var cipher = new AesGcmCryptoSession(RandomNumberGenerator.GetBytes(32));
         var plaintext = "hello world"u8.ToArray();
         var encrypted = new byte[plaintext.Length + 28];
         cipher.Encrypt(plaintext, encrypted);
@@ -69,7 +69,7 @@ public class AesGcmCryptoSessionTests
     [Fact]
     public void Encrypt_WithTooSmallResultBuffer_Throws()
     {
-        using var cipher = new AesGcmCryptoSession(RandomNumberGenerator.GetBytes(32), 60);
+        using var cipher = new AesGcmCryptoSession(RandomNumberGenerator.GetBytes(32));
         var plaintext = "hello world"u8.ToArray();
         var tooSmall = new byte[plaintext.Length];
 
@@ -79,7 +79,7 @@ public class AesGcmCryptoSessionTests
     [Fact]
     public void Decrypt_WithTooShortCiphertext_Throws()
     {
-        using var cipher = new AesGcmCryptoSession(RandomNumberGenerator.GetBytes(32), 60);
+        using var cipher = new AesGcmCryptoSession(RandomNumberGenerator.GetBytes(32));
         var tooShort = new byte[10];
         var result = new byte[4];
 
@@ -91,7 +91,7 @@ public class AesGcmCryptoSessionTests
     {
         var invalidKey = RandomNumberGenerator.GetBytes(10);
 
-        Assert.Throws<ArgumentException>(() => new AesGcmCryptoSession(invalidKey, 60));
+        Assert.Throws<ArgumentException>(() => new AesGcmCryptoSession(invalidKey));
     }
 
     [Fact]
@@ -99,35 +99,13 @@ public class AesGcmCryptoSessionTests
     {
         var zeroKey = new byte[32];
 
-        Assert.Throws<ArgumentException>(() => new AesGcmCryptoSession(zeroKey, 60));
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    [InlineData(301)]
-    public void Constructor_DoesNotValidateExpirySeconds(int expirySeconds)
-    {
-        // AesGcmCryptoSession is internal - its only caller, AesGcmCryptoSessionProvider, already
-        // validates expirySeconds (see AesGcmCryptoSessionProviderTests), so this constructor
-        // trusts it rather than re-checking.
-        using var session = new AesGcmCryptoSession(RandomNumberGenerator.GetBytes(32), expirySeconds);
-    }
-
-    [Fact]
-    public void Constructor_SetsExpiresAtApproximatelyExpirySecondsFromNow()
-    {
-        var before = DateTimeOffset.UtcNow;
-        using var cipher = new AesGcmCryptoSession(RandomNumberGenerator.GetBytes(32), 60);
-        var after = DateTimeOffset.UtcNow;
-
-        Assert.InRange(cipher.ExpiresAt, before.AddSeconds(60), after.AddSeconds(60));
+        Assert.Throws<ArgumentException>(() => new AesGcmCryptoSession(zeroKey));
     }
 
     [Fact]
     public void Encrypt_WithAllZeroPlaintext_Throws()
     {
-        using var cipher = new AesGcmCryptoSession(RandomNumberGenerator.GetBytes(32), 60);
+        using var cipher = new AesGcmCryptoSession(RandomNumberGenerator.GetBytes(32));
         var zeroPlaintext = new byte[11];
         var encrypted = new byte[zeroPlaintext.Length + 28];
 
@@ -137,7 +115,7 @@ public class AesGcmCryptoSessionTests
     [Fact]
     public void Decrypt_WithNonZeroButTooShortCiphertext_Throws()
     {
-        using var cipher = new AesGcmCryptoSession(RandomNumberGenerator.GetBytes(32), 60);
+        using var cipher = new AesGcmCryptoSession(RandomNumberGenerator.GetBytes(32));
         var tooShort = RandomNumberGenerator.GetBytes(10); // non-zero, but shorter than nonce + tag
         var result = new byte[4];
 
@@ -147,7 +125,7 @@ public class AesGcmCryptoSessionTests
     [Fact]
     public void Decrypt_WithTooSmallResultBuffer_Throws()
     {
-        using var cipher = new AesGcmCryptoSession(RandomNumberGenerator.GetBytes(32), 60);
+        using var cipher = new AesGcmCryptoSession(RandomNumberGenerator.GetBytes(32));
         var plaintext = "hello world"u8.ToArray();
         var encrypted = new byte[plaintext.Length + 28];
         cipher.Encrypt(plaintext, encrypted);
@@ -161,7 +139,7 @@ public class AesGcmCryptoSessionTests
     {
         var key = RandomNumberGenerator.GetBytes(32);
         var keyClone = (byte[])key.Clone();
-        var cipher = new AesGcmCryptoSession(key, 60);
+        var cipher = new AesGcmCryptoSession(key);
 
         cipher.Dispose();
 
@@ -172,7 +150,7 @@ public class AesGcmCryptoSessionTests
     [Fact]
     public void Dispose_ThenEncrypt_Throws()
     {
-        var cipher = new AesGcmCryptoSession(RandomNumberGenerator.GetBytes(32), 60);
+        var cipher = new AesGcmCryptoSession(RandomNumberGenerator.GetBytes(32));
         cipher.Dispose();
 
         Assert.Throws<ObjectDisposedException>(() => cipher.Encrypt("hello"u8.ToArray(), new byte[33]));

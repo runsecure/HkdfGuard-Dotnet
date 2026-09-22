@@ -23,9 +23,6 @@ internal sealed class FakeKeyWrapper(byte[] key) : IKeyWrapper
     public int Encrypt(Span<byte> plaintext, Span<byte> result)
         => throw new NotSupportedException($"{nameof(FakeKeyWrapper)} only supports Decrypt.");
 
-    public int Encrypt(Span<byte> plaintext, Span<byte> result, ReadOnlySpan<byte> aad)
-        => throw new NotSupportedException($"{nameof(FakeKeyWrapper)} only supports Decrypt.");
-
     public int Decrypt(ReadOnlySpan<byte> wrapped, Span<byte> result)
     {
         DecryptCallCount++;
@@ -35,9 +32,6 @@ internal sealed class FakeKeyWrapper(byte[] key) : IKeyWrapper
         key.CopyTo(result);
         return key.Length;
     }
-
-    public int Decrypt(ReadOnlySpan<byte> wrapped, Span<byte> result, ReadOnlySpan<byte> aad)
-        => Decrypt(wrapped, result);
 
     public int GenerateAndWrap(Span<byte> result)
     {

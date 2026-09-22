@@ -15,7 +15,7 @@ public class DataProtectorTests
     private static KeyRing CreateRingWithOneKey()
     {
         var ring = new KeyRing(new DefaultFormatProvider());
-        ring.Add(1, new KeyWrappedDataEncryptionKey(new AesGcmCryptoSessionProvider(new FakeKeyWrapper(RandomNumberGenerator.GetBytes(32)), "wrapped"u8.ToArray(), 60)));
+        ring.Add(1, new KeyWrappedDataEncryptionKey(new AesGcmCryptoProvider(new FakeKeyWrapper(RandomNumberGenerator.GetBytes(32)), "wrapped"u8.ToArray(), 60)));
         return ring;
     }
 

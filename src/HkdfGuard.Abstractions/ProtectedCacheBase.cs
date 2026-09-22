@@ -20,7 +20,7 @@ public abstract class ProtectedCacheBase(IDataProtectionKey dataProtectionKey) :
     /// The encrypted values this cache holds, keyed case-insensitively. Protected so concrete
     /// caches (e.g. ProtectedCache's Add/AddOrUpdate) can populate it directly.
     /// </summary>
-    protected readonly ConcurrentDictionary<string, byte[]> Cache = new(StringComparer.OrdinalIgnoreCase);
+    protected ConcurrentDictionary<string, byte[]> Data = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Called when name isn't already in Cache, before Decrypt/TryGetMaxDecryptedLength give
@@ -48,7 +48,7 @@ public abstract class ProtectedCacheBase(IDataProtectionKey dataProtectionKey) :
         }
         catch (Exception ex)
         {
-            HkdfGuardTelemetry.Root.RecordException(activity, ex);
+            ComponentTelemetry.RecordException(activity, ex);
             throw;
         }
     }
@@ -80,7 +80,7 @@ public abstract class ProtectedCacheBase(IDataProtectionKey dataProtectionKey) :
         }
         catch (Exception ex)
         {
-            HkdfGuardTelemetry.Root.RecordException(activity, ex);
+            ComponentTelemetry.RecordException(activity, ex);
             throw;
         }
     }
@@ -100,10 +100,10 @@ public abstract class ProtectedCacheBase(IDataProtectionKey dataProtectionKey) :
 
     private bool TryGetEncrypted(string name, out byte[] encrypted)
     {
-        if (Cache.TryGetValue(name, out encrypted!))
+        if (Data.TryGetValue(name, out encrypted!))
             return true;
 
-        if (TryPopulate(name) && Cache.TryGetValue(name, out encrypted!))
+        if (TryPopulate(name) && Data.TryGetValue(name, out encrypted!))
             return true;
 
         encrypted = null!;

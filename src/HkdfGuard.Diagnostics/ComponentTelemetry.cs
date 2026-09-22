@@ -13,7 +13,6 @@ namespace HkdfGuard.Diagnostics;
 public sealed class ComponentTelemetry
 {
     private readonly ComponentTelemetry? _sharedFlagOwner;
-    private bool _ownEnableSensitiveLogging;
 
     /// <summary>
     /// This component's ActivitySource/Meter scope name - e.g. "HkdfGuard.Cache".
@@ -50,20 +49,20 @@ public sealed class ComponentTelemetry
     /// </summary>
     public bool EnableSensitiveLogging
     {
-        get => _sharedFlagOwner?.EnableSensitiveLogging ?? _ownEnableSensitiveLogging;
+        get => _sharedFlagOwner?.EnableSensitiveLogging ?? field;
         set
         {
             if (_sharedFlagOwner is not null)
                 _sharedFlagOwner.EnableSensitiveLogging = value;
             else
-                _ownEnableSensitiveLogging = value;
+                field = value;
         }
     }
 
     /// <summary>
     /// Records an exception on the current activity and marks it as errored.
     /// </summary>
-    public void RecordException(Activity? activity, Exception exception)
+    public static void RecordException(Activity? activity, Exception exception)
     {
         activity?.AddException(exception);
         activity?.SetStatus(ActivityStatusCode.Error, exception.Message);

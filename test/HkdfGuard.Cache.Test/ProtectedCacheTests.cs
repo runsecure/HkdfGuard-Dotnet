@@ -12,10 +12,10 @@ namespace HkdfGuard.Cache.Test;
 
 public class ProtectedCacheTests
 {
-    private static ProtectedCache CreateCache()
+    private static IProtectedCache CreateCache()
     {
         var wrapper = new FakeKeyWrapper(RandomNumberGenerator.GetBytes(32));
-        var dataProtectionKey = new KeyWrappedDataEncryptionKey(new AesGcmCryptoSessionProvider(wrapper, "wrapped"u8.ToArray(), 60));
+        var dataProtectionKey = new KeyWrappedDataEncryptionKey(new AesGcmCryptoProvider(wrapper, "wrapped"u8.ToArray(), 60));
         return new ProtectedCache(dataProtectionKey);
     }
 
@@ -452,7 +452,7 @@ public class ProtectedCacheTests
     public void Add_WithNullLogger_StillWorks()
     {
         var wrapper = new FakeKeyWrapper(RandomNumberGenerator.GetBytes(32));
-        var dataProtectionKey = new KeyWrappedDataEncryptionKey(new AesGcmCryptoSessionProvider(wrapper, "wrapped"u8.ToArray(), 60));
+        var dataProtectionKey = new KeyWrappedDataEncryptionKey(new AesGcmCryptoProvider(wrapper, "wrapped"u8.ToArray(), 60));
         var cache = new ProtectedCache(dataProtectionKey, logger: null);
 
         var exception = Record.Exception(() => cache.Add("item", "value"u8.ToArray()));
@@ -469,7 +469,7 @@ public class ProtectedCacheTests
             HkdfGuardTelemetry.Cache.EnableSensitiveLogging = true;
 
             var wrapper = new FakeKeyWrapper(RandomNumberGenerator.GetBytes(32));
-            var dataProtectionKey = new KeyWrappedDataEncryptionKey(new AesGcmCryptoSessionProvider(wrapper, "wrapped"u8.ToArray(), 60));
+            var dataProtectionKey = new KeyWrappedDataEncryptionKey(new AesGcmCryptoProvider(wrapper, "wrapped"u8.ToArray(), 60));
             var logger = new FakeLogger<ProtectedCache>();
             var cache = new ProtectedCache(dataProtectionKey, logger);
 
@@ -489,7 +489,7 @@ public class ProtectedCacheTests
     public void Add_WithLoggerWhenDuplicateNameThrows_LogsOperationFailed()
     {
         var wrapper = new FakeKeyWrapper(RandomNumberGenerator.GetBytes(32));
-        var dataProtectionKey = new KeyWrappedDataEncryptionKey(new AesGcmCryptoSessionProvider(wrapper, "wrapped"u8.ToArray(), 60));
+        var dataProtectionKey = new KeyWrappedDataEncryptionKey(new AesGcmCryptoProvider(wrapper, "wrapped"u8.ToArray(), 60));
         var logger = new FakeLogger<ProtectedCache>();
         var cache = new ProtectedCache(dataProtectionKey, logger);
         cache.Add("item", "first"u8.ToArray());

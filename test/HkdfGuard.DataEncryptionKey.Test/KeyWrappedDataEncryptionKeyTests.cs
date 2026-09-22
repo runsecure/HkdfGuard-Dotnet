@@ -11,7 +11,7 @@ public class KeyWrappedDataEncryptionKeyTests
     private static KeyWrappedDataEncryptionKey CreateKey(out FakeKeyWrapper wrapper)
     {
         wrapper = new FakeKeyWrapper(RandomNumberGenerator.GetBytes(32));
-        return new KeyWrappedDataEncryptionKey(new AesGcmCryptoSessionProvider(wrapper, "wrapped"u8.ToArray(), 60));
+        return new KeyWrappedDataEncryptionKey(new AesGcmCryptoProvider(wrapper, "wrapped"u8.ToArray(), 60));
     }
 
     [Fact]
@@ -86,24 +86,6 @@ public class KeyWrappedDataEncryptionKeyTests
         var encrypted = dataProtectionKey.Encrypt(plaintext);
 
         Assert.Equal(expectedLength, encrypted.Length);
-    }
-
-    [Fact]
-    public void Encrypt_WhenSessionProviderFails_RecordsExceptionAndThrows()
-    {
-        var dataProtectionKey = new KeyWrappedDataEncryptionKey(
-            new ThrowingCryptoSessionProvider(new InvalidOperationException("session unavailable")));
-
-        Assert.Throws<InvalidOperationException>(() => dataProtectionKey.Encrypt("top secret"u8.ToArray()));
-    }
-
-    [Fact]
-    public void Decrypt_WhenSessionProviderFails_RecordsExceptionAndThrows()
-    {
-        var dataProtectionKey = new KeyWrappedDataEncryptionKey(
-            new ThrowingCryptoSessionProvider(new InvalidOperationException("session unavailable")));
-
-        Assert.Throws<InvalidOperationException>(() => dataProtectionKey.Decrypt(ReadOnlySpan<byte>.Empty, new byte[16]));
     }
 
     [Fact]

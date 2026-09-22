@@ -11,7 +11,7 @@ public class HkdfGuardServiceCollectionExtensionsTests
     private static KeyRing BuildRing(KeyRingBuilder builder)
         => builder
             .WithKeyWrapper(new FakeKeyWrapper(RandomNumberGenerator.GetBytes(32)))
-            .WithSessionProviderFactory((keyWrapper, wrapped) => new AesGcmCryptoSessionProvider(keyWrapper, wrapped, 60))
+            .WithSessionProviderFactory((keyWrapper, wrapped) => new AesGcmCryptoProvider(keyWrapper, wrapped, 60))
             .WithEphemeralKey(1)
             .Build();
 
@@ -80,7 +80,7 @@ public class HkdfGuardServiceCollectionExtensionsTests
         services.AddKeyRing(BuildRing);
         services.AddKeyRing(builder => builder
             .WithKeyWrapper(new FakeKeyWrapper(RandomNumberGenerator.GetBytes(32)))
-            .WithSessionProviderFactory((keyWrapper, wrapped) => new AesGcmCryptoSessionProvider(keyWrapper, wrapped, 60))
+            .WithSessionProviderFactory((keyWrapper, wrapped) => new AesGcmCryptoProvider(keyWrapper, wrapped, 60))
             .WithEphemeralKey(2)
             .Build());
 

@@ -10,6 +10,4 @@ namespace HkdfGuard.EncryptedConfiguration;
 /// TryGetMaxDecryptedLength using that same name as the configuration key; every other
 /// IConfigurationRoot member behaves exactly as it does on the underlying root.
 /// </summary>
-public interface IProtectedConfigurationRoot : IConfigurationRoot, IProtectedReadOnlyCache
-{
-}
+public interface IProtectedConfigurationRoot : IConfigurationRoot, IProtectedReadOnlyCache;

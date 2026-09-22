@@ -18,7 +18,7 @@ namespace HkdfGuard.DataEncryptionKey;
 /// highest becomes CurrentVersion, automatically, the moment it's Added - there is no separate
 /// call to designate one, so it can never fall out of sync with what's actually registered.
 /// </summary>
-public sealed class KeyRing(IEncryptedFormatProvider formatProvider)
+public sealed class KeyRing(IEncryptedFormatProvider formatProvider) : IDisposable
 {
     private const int NoCurrentVersion = int.MinValue;
 
@@ -36,10 +36,7 @@ public sealed class KeyRing(IEncryptedFormatProvider formatProvider)
         get
         {
             var current = _currentVersion;
-            if (current == NoCurrentVersion)
-                throw new InvalidOperationException("No current version has been set. Add a key first.");
-
-            return current;
+            return current == NoCurrentVersion ? throw new InvalidOperationException("No current version has been set. Add a key first.") : current;
         }
     }
 
@@ -70,7 +67,7 @@ public sealed class KeyRing(IEncryptedFormatProvider formatProvider)
         }
         catch (Exception ex)
         {
-            HkdfGuardTelemetry.DataProtection.RecordException(activity, ex);
+            ComponentTelemetry.RecordException(activity, ex);
             throw;
         }
         finally
@@ -92,7 +89,7 @@ public sealed class KeyRing(IEncryptedFormatProvider formatProvider)
 
         var notFound = new KeyNotFoundException($"No key is registered for version {version}.");
         using var activity = HkdfGuardTelemetry.DataProtection.ActivitySource.StartActivity(ActivityNames.DataProtection.KeyRingGet);
-        HkdfGuardTelemetry.DataProtection.RecordException(activity, notFound);
+        ComponentTelemetry.RecordException(activity, notFound);
         throw notFound;
     }
 
@@ -124,7 +121,7 @@ public sealed class KeyRing(IEncryptedFormatProvider formatProvider)
         catch (InvalidOperationException ex)
         {
             using var activity = HkdfGuardTelemetry.DataProtection.ActivitySource.StartActivity(ActivityNames.DataProtection.KeyRingGetCurrent);
-            HkdfGuardTelemetry.DataProtection.RecordException(activity, ex);
+            ComponentTelemetry.RecordException(activity, ex);
             throw;
         }
     }
@@ -138,4 +135,9 @@ public sealed class KeyRing(IEncryptedFormatProvider formatProvider)
     /// <param name="name">Used as this protector's Additional Auth Data on every Encrypt/Decrypt</param>
     public IDataProtector CreateProtector(string name)
         => new DataProtector(name, this, formatProvider);
+
+    public void Dispose()
+    {
+        _addGate.Dispose();
+    }
 }

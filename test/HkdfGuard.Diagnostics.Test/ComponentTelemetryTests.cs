@@ -26,7 +26,7 @@ public class ComponentTelemetryTests
     [MemberData(nameof(AllComponents))]
     public void RecordException_WithNullActivity_DoesNotThrow(ComponentTelemetry component)
     {
-        var exception = Record.Exception(() => component.RecordException(null, new InvalidOperationException("boom")));
+        var exception = Record.Exception(() => ComponentTelemetry.RecordException(null, new InvalidOperationException("boom")));
 
         Assert.Null(exception);
     }
@@ -45,7 +45,7 @@ public class ComponentTelemetryTests
         using var activity = component.ActivitySource.StartActivity("test-activity");
         var exception = new InvalidOperationException("boom");
 
-        component.RecordException(activity, exception);
+        ComponentTelemetry.RecordException(activity, exception);
 
         Assert.NotNull(activity);
         Assert.Equal(ActivityStatusCode.Error, activity.Status);

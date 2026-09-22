@@ -56,10 +56,9 @@ public static class Base64ConversionUtility
     /// <returns>Number of bytes written to the destination</returns>
     public static int FromBase64(ReadOnlySpan<char> base64, Span<byte> destination)
     {
-        if (!Convert.TryFromBase64Chars(base64, destination, out var bytesWritten))
-            throw new FormatException("Input is not valid base64, or the destination buffer is too small.");
-
-        return bytesWritten;
+        return Convert.TryFromBase64Chars(base64, destination, out var bytesWritten)
+            ? bytesWritten
+            : throw new FormatException("Input is not valid base64, or the destination buffer is too small.");
     }
 
     /// <summary>
@@ -78,9 +77,8 @@ public static class Base64ConversionUtility
     /// <returns>Number of chars written to the destination</returns>
     public static int ToBase64Chars(ReadOnlySpan<byte> data, Span<char> destination)
     {
-        if (!Convert.TryToBase64Chars(data, destination, out var charsWritten))
-            throw new ArgumentException("Destination span too small.", nameof(destination));
-
-        return charsWritten;
+        return Convert.TryToBase64Chars(data, destination, out var charsWritten)
+            ? charsWritten
+            : throw new ArgumentException("Destination span too small.", nameof(destination));
     }
 }

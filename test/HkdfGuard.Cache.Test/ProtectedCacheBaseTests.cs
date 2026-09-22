@@ -11,7 +11,7 @@ public class ProtectedCacheBaseTests
     private static PopulatingCache CreateCache()
     {
         var wrapper = new FakeKeyWrapper(RandomNumberGenerator.GetBytes(32));
-        var dataProtectionKey = new KeyWrappedDataEncryptionKey(new AesGcmCryptoSessionProvider(wrapper, "wrapped"u8.ToArray(), 60));
+        var dataProtectionKey = new KeyWrappedDataEncryptionKey(new AesGcmCryptoProvider(wrapper, "wrapped"u8.ToArray(), 60));
         return new PopulatingCache(dataProtectionKey);
     }
 
@@ -92,7 +92,7 @@ public class ProtectedCacheBaseTests
     public void DefaultTryPopulate_ReturnsFalse_WithoutOverride()
     {
         var wrapper = new FakeKeyWrapper(RandomNumberGenerator.GetBytes(32));
-        var dataProtectionKey = new KeyWrappedDataEncryptionKey(new AesGcmCryptoSessionProvider(wrapper, "wrapped"u8.ToArray(), 60));
+        var dataProtectionKey = new KeyWrappedDataEncryptionKey(new AesGcmCryptoProvider(wrapper, "wrapped"u8.ToArray(), 60));
         var cache = new PopulatingCache(dataProtectionKey) { OnTryPopulate = null };
 
         var written = cache.Decrypt("item", new byte[16]);

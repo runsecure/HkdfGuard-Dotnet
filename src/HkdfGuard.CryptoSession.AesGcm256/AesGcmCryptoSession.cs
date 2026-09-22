@@ -11,7 +11,7 @@ namespace HkdfGuard.CryptoSession.AesGcm256;
 /// (releasing the AesGcm instance and zeroing the key) once no longer needed rather than rebuilt
 /// on every operation.
 /// </summary>
-internal class AesGcmCryptoSession : ICryptoSession
+internal class AesGcmCryptoSession : IDisposable
 {
     private const int TagSize = 16;
     private const int NonceSize = 12;
@@ -20,16 +20,10 @@ internal class AesGcmCryptoSession : ICryptoSession
     private readonly byte[] _key;
     private readonly AesGcm _aes;
 
-    /// <inheritdoc/>
-    public DateTimeOffset ExpiresAt { get; }
-
     /// <param name="key">The 32-byte AES-256 key this session encrypts/decrypts with - ownership
     /// transfers to this instance, which zeroes it on Dispose.</param>
-    /// <param name="expirySeconds">How many seconds from now this session should be treated as
-    /// valid for (see ExpiresAt) - not validated here, since this type is internal and its only
-    /// caller (AesGcmCryptoSessionProvider) already validates it.</param>
     /// <exception cref="ArgumentException">key is empty/all-zero, or not exactly 32 bytes</exception>
-    public AesGcmCryptoSession(byte[] key, int expirySeconds)
+    internal AesGcmCryptoSession(byte[] key)
     {
         if (ArrayUtility.IsNullOrEmpty(key))
             throw new ArgumentException("AES key must not be empty or all zero.", nameof(key));
@@ -39,15 +33,12 @@ internal class AesGcmCryptoSession : ICryptoSession
 
         _key = key;
         _aes = new AesGcm(key, TagSize);
-        ExpiresAt = DateTimeOffset.UtcNow.AddSeconds(expirySeconds);
     }
 
-    /// <inheritdoc/>
-    public int Encrypt(Span<byte> plaintext, Span<byte> result)
+    internal int Encrypt(Span<byte> plaintext, Span<byte> result)
         => Encrypt(plaintext, ReadOnlySpan<byte>.Empty, result);
 
-    /// <inheritdoc/>
-    public int Encrypt(Span<byte> plaintext, ReadOnlySpan<byte> aad, Span<byte> result)
+    internal int Encrypt(Span<byte> plaintext, ReadOnlySpan<byte> aad, Span<byte> result)
     {
         using var activity = HkdfGuardTelemetry.CryptoSessionAesGcm256.ActivitySource.StartActivity(ActivityNames.CryptoSessionAesGcm256.Encrypt);
         if (HkdfGuardTelemetry.CryptoSessionAesGcm256.EnableSensitiveLogging)
@@ -60,7 +51,7 @@ internal class AesGcmCryptoSession : ICryptoSession
         }
         catch (Exception ex)
         {
-            HkdfGuardTelemetry.CryptoSessionAesGcm256.RecordException(activity, ex);
+            ComponentTelemetry.RecordException(activity, ex);
             throw;
         }
         finally
@@ -78,7 +69,7 @@ internal class AesGcmCryptoSession : ICryptoSession
             throw new ArgumentException("Result buffer too small.", nameof(result));
 
         // Layout: [nonce | ciphertext | tag]
-        var nonce = result.Slice(0, NonceSize);
+        var nonce = result[..NonceSize];
         var ciphertext = result.Slice(NonceSize, plaintext.Length);
         var tag = result.Slice(NonceSize + plaintext.Length, TagSize);
 
@@ -89,12 +80,10 @@ internal class AesGcmCryptoSession : ICryptoSession
         return NonceSize + plaintext.Length + TagSize;
     }
 
-    /// <inheritdoc/>
-    public int Decrypt(ReadOnlySpan<byte> ciphertext, Span<byte> result)
+    internal int Decrypt(ReadOnlySpan<byte> ciphertext, Span<byte> result)
         => Decrypt(ciphertext, ReadOnlySpan<byte>.Empty, result);
 
-    /// <inheritdoc/>
-    public int Decrypt(ReadOnlySpan<byte> ciphertext, ReadOnlySpan<byte> aad, Span<byte> result)
+    internal int Decrypt(ReadOnlySpan<byte> ciphertext, ReadOnlySpan<byte> aad, Span<byte> result)
     {
         using var activity = HkdfGuardTelemetry.CryptoSessionAesGcm256.ActivitySource.StartActivity(ActivityNames.CryptoSessionAesGcm256.Decrypt);
         if (HkdfGuardTelemetry.CryptoSessionAesGcm256.EnableSensitiveLogging)
@@ -107,7 +96,7 @@ internal class AesGcmCryptoSession : ICryptoSession
         }
         catch (Exception ex)
         {
-            HkdfGuardTelemetry.CryptoSessionAesGcm256.RecordException(activity, ex);
+            ComponentTelemetry.RecordException(activity, ex);
             throw;
         }
     }
@@ -125,11 +114,11 @@ internal class AesGcmCryptoSession : ICryptoSession
         if (result.Length < resultLength)
             throw new ArgumentException("Result buffer too small.", nameof(result));
 
-        var nonce = ciphertext.Slice(0, NonceSize);
+        var nonce = ciphertext[..NonceSize];
         var ct = ciphertext.Slice(NonceSize, resultLength);
         var tag = ciphertext.Slice(NonceSize + resultLength, TagSize);
 
-        _aes.Decrypt(nonce, ct, tag, result.Slice(0, resultLength), aad);
+        _aes.Decrypt(nonce, ct, tag, result[..resultLength], aad);
 
         return resultLength;
     }

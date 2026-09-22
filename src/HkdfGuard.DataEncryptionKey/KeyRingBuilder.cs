@@ -19,10 +19,10 @@ namespace HkdfGuard.DataEncryptionKey;
 /// </summary>
 public sealed class KeyRingBuilder
 {
-    private readonly List<(int Version, string Path)> _keyFiles = [];
+    private readonly SortedDictionary<int, string> _keyFiles = [];
     private readonly List<int> _ephemeralVersions = [];
     private IKeyWrapper? _keyWrapper;
-    private Func<IKeyWrapper, byte[], ICryptoSessionProvider>? _sessionProviderFactory;
+    private Func<IKeyWrapper, byte[], ICryptoProvider>? _sessionProviderFactory;
     private IEncryptedFormatProvider _formatProvider = new DefaultFormatProvider();
 
     public string? ServiceName { get; private set; }
@@ -78,7 +78,7 @@ public sealed class KeyRingBuilder
     /// per registered file with the shared IKeyWrapper and that file's own wrapped bytes - e.g.
     /// <c>(kw, wrapped) => new AesGcmCryptoSessionProvider(kw, wrapped, 60)</c>.
     /// </summary>
-    public KeyRingBuilder WithSessionProviderFactory(Func<IKeyWrapper, byte[], ICryptoSessionProvider> sessionProviderFactory)
+    public KeyRingBuilder WithSessionProviderFactory(Func<IKeyWrapper, byte[], ICryptoProvider> sessionProviderFactory)
     {
         _sessionProviderFactory = sessionProviderFactory;
         return this;
@@ -103,7 +103,7 @@ public sealed class KeyRingBuilder
     /// <param name="pathToFile">Path to this version's wrapped DEK file</param>
     public KeyRingBuilder WithKeyFile(int version, string pathToFile)
     {
-        _keyFiles.Add((version, pathToFile));
+        _keyFiles.Add(version, pathToFile);
         return this;
     }
 

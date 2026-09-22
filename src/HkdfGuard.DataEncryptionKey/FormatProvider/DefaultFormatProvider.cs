@@ -24,7 +24,7 @@ public class DefaultFormatProvider : IEncryptedFormatProvider
         }
         catch (Exception ex)
         {
-            HkdfGuardTelemetry.DataProtection.RecordException(activity, ex);
+            ComponentTelemetry.RecordException(activity, ex);
             throw;
         }
     }
@@ -56,7 +56,7 @@ public class DefaultFormatProvider : IEncryptedFormatProvider
         }
         catch (Exception ex)
         {
-            HkdfGuardTelemetry.DataProtection.RecordException(activity, ex);
+            ComponentTelemetry.RecordException(activity, ex);
             throw;
         }
     }
@@ -75,14 +75,13 @@ public class DefaultFormatProvider : IEncryptedFormatProvider
                 throw new FormatException(
                     $"Invalid encrypted format. Expected '{EncPrefix}{Delimiter}{VersionPrefix}<version>{Delimiter}<base64>'.");
 
-            if (!Base64ConversionUtility.IsBase64(base64))
-                throw new FormatException("Encrypted value is not valid base64.");
-
-            return Base64ConversionUtility.GetBinaryLength(base64);
+            return Base64ConversionUtility.IsBase64(base64)
+                ? Base64ConversionUtility.GetBinaryLength(base64)
+                : throw new FormatException("Encrypted value is not valid base64.");
         }
         catch (Exception ex)
         {
-            HkdfGuardTelemetry.DataProtection.RecordException(activity, ex);
+            ComponentTelemetry.RecordException(activity, ex);
             throw;
         }
     }

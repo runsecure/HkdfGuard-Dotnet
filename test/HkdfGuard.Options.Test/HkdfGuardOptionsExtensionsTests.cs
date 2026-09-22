@@ -52,7 +52,7 @@ public class HkdfGuardOptionsExtensionsTests
 
         var ring = options.ApplyTo(new KeyRingBuilder())
             .WithKeyWrapper(new FakeKeyWrapper(RandomNumberGenerator.GetBytes(32)))
-            .WithSessionProviderFactory((keyWrapper, wrapped) => new AesGcmCryptoSessionProvider(keyWrapper, wrapped, 60))
+            .WithSessionProviderFactory((keyWrapper, wrapped) => new AesGcmCryptoProvider(keyWrapper, wrapped, 60))
             .Build();
 
         Assert.Equal(2, ring.CurrentVersion);
@@ -72,7 +72,7 @@ public class HkdfGuardOptionsExtensionsTests
 
             var ring = options.ApplyTo(new KeyRingBuilder())
                 .WithKeyWrapper(new FakeKeyWrapper(RandomNumberGenerator.GetBytes(32)))
-                .WithSessionProviderFactory((keyWrapper, wrapped) => new AesGcmCryptoSessionProvider(keyWrapper, wrapped, 60))
+                .WithSessionProviderFactory((keyWrapper, wrapped) => new AesGcmCryptoProvider(keyWrapper, wrapped, 60))
                 .Build();
 
             Assert.Equal(1, ring.CurrentVersion);
@@ -98,7 +98,7 @@ public class HkdfGuardOptionsExtensionsTests
 
             var ring = options.ApplyTo(new KeyRingBuilder())
                 .WithKeyWrapper(new FakeKeyWrapper(RandomNumberGenerator.GetBytes(32)))
-                .WithSessionProviderFactory((keyWrapper, wrapped) => new AesGcmCryptoSessionProvider(keyWrapper, wrapped, 60))
+                .WithSessionProviderFactory((keyWrapper, wrapped) => new AesGcmCryptoProvider(keyWrapper, wrapped, 60))
                 .Build();
 
             Assert.Equal(2, ring.CurrentVersion);

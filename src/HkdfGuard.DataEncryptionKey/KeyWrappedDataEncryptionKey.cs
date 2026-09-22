@@ -9,7 +9,7 @@ namespace HkdfGuard.DataEncryptionKey;
 /// actual data encrypt/decrypt with it - see ICryptoSessionProvider. Every operation resolves
 /// GetSession fresh rather than caching the session itself, so it always uses a non-expired one.
 /// </summary>
-public class KeyWrappedDataEncryptionKey(ICryptoSessionProvider sessionProvider) : IDataProtectionKey
+public class KeyWrappedDataEncryptionKey(ICryptoProvider provider) : IDataProtectionKey
 {
     // ICryptoSession is cipher-agnostic, so its exact ciphertext overhead (nonce/tag for
     // AES-GCM, potentially something else for a swapped-in cipher) isn't known here - over-
@@ -30,14 +30,13 @@ public class KeyWrappedDataEncryptionKey(ICryptoSessionProvider sessionProvider)
 
         try
         {
-            var session = sessionProvider.GetSession();
             var buffer = new byte[plaintext.Length + MaxCipherOverhead];
-            var written = session.Encrypt(plaintext, aad, buffer);
-            return buffer.AsSpan(0, written).ToArray();
+            var written = provider.Encrypt(plaintext, aad, buffer);
+            return [.. buffer.AsSpan(0, written)];
         }
         catch (Exception ex)
         {
-            HkdfGuardTelemetry.DataProtection.RecordException(activity, ex);
+            ComponentTelemetry.RecordException(activity, ex);
             throw;
         }
     }
@@ -56,12 +55,11 @@ public class KeyWrappedDataEncryptionKey(ICryptoSessionProvider sessionProvider)
 
         try
         {
-            var session = sessionProvider.GetSession();
-            return session.Decrypt(ciphertext, aad, result);
+            return provider.Decrypt(ciphertext, aad, result);
         }
         catch (Exception ex)
         {
-            HkdfGuardTelemetry.DataProtection.RecordException(activity, ex);
+            ComponentTelemetry.RecordException(activity, ex);
             throw;
         }
     }

@@ -8,8 +8,8 @@ namespace HkdfGuard.DataEncryptionKey.Test;
 
 public class EphemeralDataEncryptionKeyTests
 {
-    private static readonly Func<IKeyWrapper, byte[], ICryptoSessionProvider> SessionProviderFactory =
-        (keyWrapper, wrapped) => new AesGcmCryptoSessionProvider(keyWrapper, wrapped, 60);
+    private static readonly Func<IKeyWrapper, byte[], ICryptoProvider> SessionProviderFactory =
+        (keyWrapper, wrapped) => new AesGcmCryptoProvider(keyWrapper, wrapped, 60);
 
     [Fact]
     public void Constructor_GeneratesWrappedDekExactlyOnce()

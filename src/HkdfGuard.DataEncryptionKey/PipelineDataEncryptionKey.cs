@@ -17,14 +17,14 @@ public sealed class PipelineDataEncryptionKey : IDataProtectionKey, IDisposable
     private const int DekLength = 32;
 
     private readonly byte[] _dek;
-    private readonly ICryptoSessionProvider _sessionProvider;
+    private readonly ICryptoProvider _provider;
     private readonly KeyWrappedDataEncryptionKey _inner;
 
     /// <summary>
     /// Generates a fresh, cryptographically random 32-byte DEK.
     /// </summary>
     /// <param name="sessionProviderFactory">See the other constructor overload.</param>
-    public PipelineDataEncryptionKey(Func<IKeyWrapper, byte[], ICryptoSessionProvider> sessionProviderFactory)
+    public PipelineDataEncryptionKey(Func<IKeyWrapper, byte[], ICryptoProvider> sessionProviderFactory)
         : this(RandomNumberGenerator.GetBytes(DekLength), sessionProviderFactory)
     {
     }
@@ -41,7 +41,7 @@ public sealed class PipelineDataEncryptionKey : IDataProtectionKey, IDisposable
     /// itself.
     /// </param>
     /// <exception cref="ArgumentException">dek is empty/all-zero, or not exactly 32 bytes</exception>
-    public PipelineDataEncryptionKey(byte[] dek, Func<IKeyWrapper, byte[], ICryptoSessionProvider> sessionProviderFactory)
+    public PipelineDataEncryptionKey(byte[] dek, Func<IKeyWrapper, byte[], ICryptoProvider> sessionProviderFactory)
     {
         if (ArrayUtility.IsNullOrEmpty(dek))
             throw new ArgumentException("DEK must not be empty or all zero.", nameof(dek));
@@ -53,12 +53,12 @@ public sealed class PipelineDataEncryptionKey : IDataProtectionKey, IDisposable
         try
         {
             _dek = dek;
-            _sessionProvider = sessionProviderFactory(new IdentityKeyWrapper(), dek);
-            _inner = new KeyWrappedDataEncryptionKey(_sessionProvider);
+            _provider = sessionProviderFactory(new IdentityKeyWrapper(), dek);
+            _inner = new KeyWrappedDataEncryptionKey(_provider);
         }
         catch (Exception ex)
         {
-            HkdfGuardTelemetry.DataProtection.RecordException(activity, ex);
+            ComponentTelemetry.RecordException(activity, ex);
             throw;
         }
     }
@@ -90,7 +90,7 @@ public sealed class PipelineDataEncryptionKey : IDataProtectionKey, IDisposable
     /// </summary>
     public void Dispose()
     {
-        _sessionProvider.Dispose();
+        _provider.Dispose();
         CryptographicOperations.ZeroMemory(_dek);
     }
 
@@ -101,17 +101,11 @@ public sealed class PipelineDataEncryptionKey : IDataProtectionKey, IDisposable
         public int Encrypt(Span<byte> plaintext, Span<byte> result)
             => throw new NotSupportedException($"{nameof(IdentityKeyWrapper)} only supports Decrypt.");
 
-        public int Encrypt(Span<byte> plaintext, Span<byte> result, ReadOnlySpan<byte> aad)
-            => throw new NotSupportedException($"{nameof(IdentityKeyWrapper)} only supports Decrypt.");
-
         public int Decrypt(ReadOnlySpan<byte> wrapped, Span<byte> result)
         {
             wrapped.CopyTo(result);
             return wrapped.Length;
         }
-
-        public int Decrypt(ReadOnlySpan<byte> wrapped, Span<byte> result, ReadOnlySpan<byte> aad)
-            => Decrypt(wrapped, result);
 
         public int GenerateAndWrap(Span<byte> result)
             => throw new NotSupportedException($"{nameof(IdentityKeyWrapper)} only supports Decrypt.");
