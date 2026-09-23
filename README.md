@@ -19,17 +19,17 @@ tracking and purpose-scoped Additional Authenticated Data (AAD).
   payload as an explicit argument, so a single wrapper instance (bound only to a KEK - e.g. a
   `NativeHkdfKeyWrapperV1` for one service name) can reveal any number of different wrapped DEKs
   sharing that KEK, one per registered key file.
-- **Cached, expiring, proactively-refreshed cipher sessions via `ICryptoSession`/
-  `ICryptoSessionProvider`.** A revealed DEK is bound into an `ICryptoSession` once, not
-  re-derived on every Encrypt/Decrypt - `ExpiresAt` (1-300 seconds) marks when it should be
-  refreshed instead of reused. `ICryptoSessionProvider` owns that refresh, and does it ahead of
-  time: a background timer, ticking every `expirySeconds`, reveals and builds the next session
-  before the current one expires, then swaps it in and disposes the outgoing one (zeroing its
-  key) - so `GetSession` almost never pays the unwrap cost itself, and only falls back to a
+- **Cached, expiring, proactively-refreshed cipher sessions via `ICryptoProvider`.** A revealed
+  DEK is bound into an internal cipher session once, not re-derived on every Encrypt/Decrypt - the
+  configured expiry (1-300 seconds) marks when it should be refreshed instead of reused.
+  `ICryptoProvider` owns that refresh itself, and does it ahead of time: a background timer,
+  ticking every `expirySeconds`, reveals and builds the next session before the current one
+  expires, then swaps it in and disposes the outgoing one (zeroing its key) - so an
+  Encrypt/Decrypt call almost never pays the unwrap cost itself, and only falls back to a
   synchronous refresh in the rare case a call lands in the gap right at expiry. The concrete
   session type itself (e.g. `AesGcmCryptoSession`) is an internal implementation detail - callers
-  only ever see it through `ICryptoSession`, obtained from a public `ICryptoSessionProvider` (e.g.
-  `AesGcmCryptoSessionProvider`).
+  only ever see it through the public `ICryptoProvider` they were given (e.g.
+  `AesGcmCryptoProvider`), which exposes Encrypt/Decrypt directly.
 - **Versioned, rotatable keys via `KeyRing`.** A `KeyRing` tracks any number of independently
   wrapped keys by an integer version. The highest version added automatically becomes the ring's
   `CurrentVersion` - no separate "mark as current" step, so it can never drift out of sync with
@@ -44,18 +44,79 @@ tracking and purpose-scoped Additional Authenticated Data (AAD).
   (OpenTelemetry-compatible) with exceptions recorded on failure, and an opt-in sensitive-logging
   mode that emits operation metadata (never raw key/plaintext/ciphertext bytes).
 
+## Architecture overview
+
+```
+                      +------------------------------------------+
+                      | Hardware Security Module (TPM2 / Enclave) |
+                      +------------------------------------------+
+                                           |
+                                  (Wraps / Unwraps)
+                                           v
++---------------------+       +---------------------------------------+
+| Native KMS Library  | <---> |   IKeyWrapper (NativeHkdfKeyWrapperV1, |
++---------------------+       |   resolved once per process by        |
+                               |   NativeHost)                         |
+                               +---------------------------------------+
+                                           |
+                                  (Reveals DEK)
+                                           v
+                              +---------------------------+
+                              |       ICryptoProvider      |  <-- background timer refreshes
+                              |    (AesGcmCryptoProvider)  |      + zeroes the outgoing session
+                              +---------------------------+
+                                           |
+                                   (AEAD Encrypt/Decrypt)
+                                           v
+                              +---------------------------+
+                              |    IDataProtectionKey      |
+                              | (KeyWrapped / Ephemeral /  |
+                              |        Pipeline)           |
+                              +---------------------------+
+                                           |
+                               (Version Management / AAD)
+                                           v
+               +-------------------------------------------------------+
+               |                       KeyRing                         |
+               +-------------------------------------------------------+
+                    /                      |                       \
+                   v                       v                        v
+     +------------------------+  +--------------------------+  +------------------------------+
+     |     IDataProtector      |  |  IProtectedCache /        |  | IProtectedConfigurationRoot   |
+     | (strings / char spans)  |  |  IProtectedReadOnlyCache  |  | (IConfigurationRoot wrapper)  |
+     +------------------------+  +--------------------------+  +------------------------------+
+```
+
+Same shape as every other port in this workspace (the .NET repo drives the design, so Java/Go/
+Node/Python mirror this layering, adding their own consumer branches as they catch up):
+
+1. **KEK (Key Encryption Key)** - a hardware-backed key managed by the OS/TPM/Enclave, referenced
+   only by a service name. The plaintext KEK never enters this process's memory.
+2. **DEK (Data Encryption Key)** - a 256-bit symmetric key wrapped by the KEK. Can be persisted to
+   disk (`KeyWrappedDataEncryptionKey`), generated ephemerally in memory
+   (`EphemeralDataEncryptionKey`), or used unwrapped before a KEK exists yet
+   (`PipelineDataEncryptionKey`).
+3. **`ICryptoProvider`** - the active AEAD (AES-256-GCM) cipher session holding the unwrapped DEK.
+   Automatically rotates and zeroes expired sessions on a configured schedule (1-300 seconds).
+4. **`KeyRing`** - manages multiple versioned keys. Adding a new key version doesn't break
+   decryption of data already protected under older versions.
+5. **Formatted encrypted value** - the standardized `enc::v{version}::{base64}` string, handled by
+   `IEncryptedFormatProvider`/`DefaultFormatProvider`.
+
 ## Solution layout
 
 | Project | Purpose |
 |---|---|
 | `HkdfGuard.Diagnostics` | Every library's telemetry, centralized: `HkdfGuardTelemetry` (one `ComponentTelemetry` per component - `ActivitySource`, `Meter`, `EnableSensitiveLogging`, `RecordException`, `LogSensitiveOperation`), `ActivityNames`/`AttributeNames`/`EventNames`/`MetricNames` (OpenTelemetry semantic-convention-style names, e.g. `hkdfguard.cache.add`), `CacheMetrics`, and `HkdfGuardLoggerExtensions` (`[LoggerMessage]`-generated `ILogger` extensions). No dependency on any other project in this solution - the lowest layer, designed so its naming/shape can be ported identically into a Java/Node/Python/Go implementation. |
-| `HkdfGuard.Abstractions` | Interfaces and pure data types only (`IKeyWrapper`, `ICryptoSession`, `ICryptoSessionProvider`, `IDataProtectionKey`, `IDataProtector`, `IEncryptedFormatProvider`, `KeyTrackingValue`, `ArrayUtility`, `ProtectedCacheBase`). Depends only on `HkdfGuard.Diagnostics`. |
-| `HkdfGuard.CryptoSession.AesGcm256` | `AesGcmCryptoSession` (internal - an `ICryptoSession`, key-bound at construction) and the public `AesGcmCryptoSessionProvider` (an `ICryptoSessionProvider` that reveals/refreshes it from an `IKeyWrapper` + wrapped bytes, and is the sole place the 1-300 second expiry range is validated - the provider only ever holds one active session at a time). Depends on `HkdfGuard.Abstractions`/`HkdfGuard.Diagnostics`; its `HkdfGuardTelemetry.CryptoSessionAesGcm256` component keeps its own independent `EnableSensitiveLogging` flag rather than sharing `Root`'s. |
+| `HkdfGuard.Abstractions` | Interfaces and pure data types only (`IKeyWrapper`, `ICryptoProvider`, `IDataProtectionKey`, `IDataProtector`, `IProtectedCache`/`IProtectedReadOnlyCache`, `IEncryptedFormatProvider`, `KeyTrackingValue`, `ArrayUtility`, `ProtectedCacheBase`). Depends only on `HkdfGuard.Diagnostics`. |
+| `HkdfGuard.CryptoSession.AesGcm256` | `AesGcmCryptoSession` (internal, key-bound at construction) wrapped directly by the public `AesGcmCryptoProvider` (an `ICryptoProvider` that reveals/refreshes it from an `IKeyWrapper` + wrapped bytes, and is the sole place the 1-300 second expiry range is validated - it only ever holds one active session at a time). Depends on `HkdfGuard.Abstractions`/`HkdfGuard.Diagnostics`; its `HkdfGuardTelemetry.CryptoSessionAesGcm256` component keeps its own independent `EnableSensitiveLogging` flag rather than sharing `Root`'s. |
 | `HkdfGuard.KeyWrapping.V1` | `NativeHkdfKeyWrapperV1` (an `IKeyWrapper`) and `NativeHost`, which resolve and bind the current OS's native KMS library (Linux/.so, macOS/.dylib, Windows/.dll - see `Interop/`) to wrap and unwrap a 32-byte DEK under a service-identified KEK held entirely outside this process. |
-| `HkdfGuard.DataEncryptionKey` | The application-facing API: `KeyRing`/`KeyRingBuilder`, `IDataProtector`/`DataProtector`, `KeyWrappedDataEncryptionKey`, `EphemeralDataEncryptionKey`, `PipelineDataEncryptionKey`, and the default `enc::v{version}::{base64}` wire format. |
+| `HkdfGuard.DataEncryptionKey` | The application-facing API: `KeyRing`/`KeyRingBuilder`, `IDataProtector`/`DataProtector`, `KeyWrappedDataEncryptionKey`, `EphemeralDataEncryptionKey`, `PipelineDataEncryptionKey`, and the default `enc::v{version}::{base64}` wire format. Depends on `HkdfGuard.Abstractions`/`HkdfGuard.Diagnostics`. |
+| `HkdfGuard.Cache` | `ProtectedCache` (an `IProtectedCache` backed by one `IDataProtectionKey` - encrypts on Add/AddOrUpdate, reveals on Decrypt, nothing held as plaintext beyond a single call) and `ProtectedCacheCollection` (aggregates multiple `IProtectedReadOnlyCache` sources behind one read-only surface, checked in registration order). |
+| `HkdfGuard.EncryptedConfiguration` | `ProtectedConfigurationRoot` (an `IProtectedConfigurationRoot`) - wraps an `IConfigurationRoot`, revealing values formatted as protected secrets via an `IDataProtector` bound to a `KeyRing`; configuration itself only ever holds ciphertext, and `Decrypt` reads fresh from the underlying root every time so `Reload` takes effect immediately. |
 | `HkdfGuard.DependencyInjection` | `AddKeyRing` - registers a `KeyRing` into an `IServiceCollection`, built lazily on first resolution. |
 | `HkdfGuard.Options` | `HkdfGuardOptions`/`HkdfGuardOptionsValidator`/`HkdfGuardOptionsExtensions.ApplyTo` - a plain-data mirror of `KeyRingBuilder`'s configuration surface, for binding a `KeyRing`'s identity/policy/key files from configuration. |
-| `HkdfGuard.Diagnostics.Test`, `HkdfGuard.Abstractions.Test`, `HkdfGuard.CryptoSession.AesGcm256.Test`, `HkdfGuard.KeyWrapping.V1.Test`, `HkdfGuard.DataEncryptionKey.Test`, `HkdfGuard.DependencyInjection.Test`, `HkdfGuard.Options.Test` | xUnit test suites, maintained at full line/branch coverage for their respective projects. |
+| `HkdfGuard.Diagnostics.Test`, `HkdfGuard.Abstractions.Test`, `HkdfGuard.CryptoSession.AesGcm256.Test`, `HkdfGuard.KeyWrapping.V1.Test`, `HkdfGuard.DataEncryptionKey.Test`, `HkdfGuard.Cache.Test`, `HkdfGuard.EncryptedConfiguration.Test`, `HkdfGuard.DependencyInjection.Test`, `HkdfGuard.Options.Test` | xUnit test suites, maintained at full line/branch coverage for their respective projects. |
 
 Requires **.NET 10** (`net10.0`).
 
@@ -88,7 +149,7 @@ overloads only accept an empty `aad`.
 
 `KeyRingBuilder` fluently collects a service name/cache-expiry/rotation
 policy, a shared `IKeyWrapper` and a session-provider factory, and any number of wrapped-DEK
-files - one per version - then reads each file, mints its own `ICryptoSessionProvider`, and wires
+files - one per version - then reads each file, mints its own `ICryptoProvider`, and wires
 it into a `KeyWrappedDataEncryptionKey`. `WithEphemeralKey` registers a version whose own key is
 instead generated fresh in memory on first use (see `EphemeralDataEncryptionKey`) - it shares the
 same `IKeyWrapper`/session-provider factory, so no extra configuration is needed for it:
@@ -99,7 +160,7 @@ var ring = new KeyRingBuilder()
     .WithCachedKeyExpiry(60)   // seconds, 0-300
     .WithKeyRotationDays(90)   // 1-180
     .WithKeyWrapper(new NativeHkdfKeyWrapperV1("my-service"))
-    .WithSessionProviderFactory((keyWrapper, wrapped) => new AesGcmCryptoSessionProvider(keyWrapper, wrapped, 60))
+    .WithSessionProviderFactory((keyWrapper, wrapped) => new AesGcmCryptoProvider(keyWrapper, wrapped, 60))
     .WithKeyFile(version: 1, pathToFile: "/path/to/wrapped-dek-v1.bin")
     .WithEphemeralKey(version: 2)
     .Build();
@@ -116,7 +177,7 @@ singleton (built lazily, on first resolution - calling it twice keeps the first 
 services.AddKeyRing(builder => builder
     .WithServiceName("my-service")
     .WithKeyWrapper(new NativeHkdfKeyWrapperV1("my-service"))
-    .WithSessionProviderFactory((keyWrapper, wrapped) => new AesGcmCryptoSessionProvider(keyWrapper, wrapped, 60))
+    .WithSessionProviderFactory((keyWrapper, wrapped) => new AesGcmCryptoProvider(keyWrapper, wrapped, 60))
     .WithKeyFile(version: 1, pathToFile: "/path/to/wrapped-dek-v1.bin")
     .Build());
 ```
@@ -143,12 +204,12 @@ For scenarios that don't need a durable, file-backed key at all, `EphemeralDataE
 generates and wraps a fresh DEK once, in its constructor, via `IKeyWrapper.GenerateAndWrap` - the
 plaintext DEK never crosses that call's return value, and nothing here is ever written to or read
 from a file. It then uses the same factory-delegate seam as `KeyRingBuilder` to bind an
-`ICryptoSessionProvider` to that freshly-wrapped payload:
+`ICryptoProvider` to that freshly-wrapped payload:
 
 ```csharp
 IDataProtectionKey ephemeralKey = new EphemeralDataEncryptionKey(
     new NativeHkdfKeyWrapperV1("my-service"),
-    (keyWrapper, wrapped) => new AesGcmCryptoSessionProvider(keyWrapper, wrapped, 60));
+    (keyWrapper, wrapped) => new AesGcmCryptoProvider(keyWrapper, wrapped, 60));
 ```
 
 ### Pipeline keys - encrypt now, wrap later
@@ -162,7 +223,7 @@ identity `IKeyWrapper` internal to the class:
 
 ```csharp
 using var pipelineKey = new PipelineDataEncryptionKey(
-    (keyWrapper, wrapped) => new AesGcmCryptoSessionProvider(keyWrapper, wrapped, 60));
+    (keyWrapper, wrapped) => new AesGcmCryptoProvider(keyWrapper, wrapped, 60));
 // or: new PipelineDataEncryptionKey(myExisting32ByteDek, sessionProviderFactory)
 
 byte[] encrypted = pipelineKey.Encrypt("secret value"u8);
