@@ -7,7 +7,7 @@ namespace HkdfGuard.Cache.Test.TestHelpers;
 /// tests exercise the base class's cache-miss-then-populate path without depending on any real
 /// external source.
 /// </summary>
-internal sealed class PopulatingCache(IDataProtectionKey dataProtectionKey) : ProtectedCacheBase(dataProtectionKey)
+internal sealed class PopulatingCache(IDataEncryptionKey dataEncryptionKey) : ProtectedCacheBase(dataEncryptionKey)
 {
     public int TryPopulateCallCount { get; private set; }
     public Func<string, bool>? OnTryPopulate { get; set; }

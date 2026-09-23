@@ -13,8 +13,8 @@ namespace HkdfGuard.CryptoSession.AesGcm256;
 /// </summary>
 internal class AesGcmCryptoSession : IDisposable
 {
-    private const int TagSize = 16;
-    private const int NonceSize = 12;
+    internal const int TagSize = 16;
+    internal const int NonceSize = 12;
     private const int KeyLength = 32;
 
     private readonly byte[] _key;

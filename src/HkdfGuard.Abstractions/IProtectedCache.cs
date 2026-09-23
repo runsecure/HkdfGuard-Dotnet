@@ -2,7 +2,7 @@ namespace HkdfGuard.Abstractions;
 
 /// <summary>
 /// Read/write surface of a highly concurrent name -&gt; encrypted-value cache backed by a single
-/// IDataProtectionKey. Add/AddOrUpdate protect and store plaintext under a name; the read
+/// IDataEncryptionKey. Add/AddOrUpdate protect and store plaintext under a name; the read
 /// surface (Decrypt/TryGetMaxDecryptedLength) is inherited from IProtectedReadOnlyCache.
 /// Nothing here ever holds plaintext beyond the duration of a single Add/AddOrUpdate call - only
 /// the encrypted bytes are retained internally.

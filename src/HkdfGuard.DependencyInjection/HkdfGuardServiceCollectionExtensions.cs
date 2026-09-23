@@ -14,7 +14,7 @@ public static class HkdfGuardServiceCollectionExtensions
     /// KeyRingBuilder to configure - e.g.
     /// <c>services.AddKeyRing(builder => builder.WithServiceName("my-service")
     ///     .WithKeyWrapper(new NativeHkdfKeyWrapperV1("my-service"))
-    ///     .WithSessionProviderFactory((kw, wrapped) => new AesGcmCryptoSessionProvider(kw, wrapped, 60))
+    ///     .WithCryptoProviderFactory((kw, wrapped) => new AesGcmCryptoSessionProvider(kw, wrapped, 60))
     ///     .WithKeyFile(1, "/path/to/wrapped-dek-v1.bin")
     ///     .Build())</c>.
     /// A second call is a no-op - only the first registered KeyRing wins, the same as every other

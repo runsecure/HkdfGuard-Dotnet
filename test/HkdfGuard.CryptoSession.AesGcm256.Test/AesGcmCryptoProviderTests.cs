@@ -58,4 +58,22 @@ public class AesGcmCryptoProviderTests
         // Only the constructor's eager build - the timer must not have fired after Dispose.
         Assert.Equal(1, wrapper.DecryptCallCount);
     }
+
+    [Fact]
+    public void GetEncryptedAllocationLength_AddsNonceAndTagOverhead()
+    {
+        var wrapper = new FakeKeyWrapper();
+        using var provider = new AesGcmCryptoProvider(wrapper, "wrapped"u8.ToArray(), 60);
+
+        Assert.Equal(10 + 12 + 16, provider.GetEncryptedAllocationLength(10));
+    }
+
+    [Fact]
+    public void GetDecryptedAllocationLength_RemovesNonceAndTagOverhead()
+    {
+        var wrapper = new FakeKeyWrapper();
+        using var provider = new AesGcmCryptoProvider(wrapper, "wrapped"u8.ToArray(), 60);
+
+        Assert.Equal(10, provider.GetDecryptedAllocationLength(10 + 12 + 16));
+    }
 }

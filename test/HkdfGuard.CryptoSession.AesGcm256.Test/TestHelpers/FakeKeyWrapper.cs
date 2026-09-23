@@ -9,6 +9,7 @@ namespace HkdfGuard.CryptoSession.AesGcm256.Test.TestHelpers;
 internal sealed class FakeKeyWrapper : IKeyWrapper
 {
     public int DecryptCallCount { get; private set; }
+    public int GenerateAndWrapCallCount { get; private set; }
 
     /// <summary>
     /// When set, Decrypt throws this instead of revealing a key.
@@ -27,5 +28,10 @@ internal sealed class FakeKeyWrapper : IKeyWrapper
         return result.Length;
     }
 
-    public int GenerateAndWrap(Span<byte> result) => throw new NotSupportedException();
+    public int GenerateAndWrap(Span<byte> result)
+    {
+        GenerateAndWrapCallCount++;
+        System.Security.Cryptography.RandomNumberGenerator.Fill(result[..32]);
+        return 32;
+    }
 }

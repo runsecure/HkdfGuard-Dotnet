@@ -16,12 +16,13 @@ namespace HkdfGuard.CryptoSession.AesGcm256;
 public sealed class AesGcmCryptoProvider : ICryptoProvider
 {
     private const int KeyLength = 32;
-
+    private const int ExtraAllocationLength = AesGcmCryptoSession.NonceSize + AesGcmCryptoSession.TagSize;
+    
     private readonly IKeyWrapper _keyWrapper;
     private readonly byte[] _wrapped;
     private readonly int _expirySeconds;
     private readonly CancellationTokenSource _cts = new();
-    private readonly Task _refreshTask;
+    private readonly Task? _refreshTask;
     private readonly Lock _gate = new();
     private AesGcmCryptoSession? _current;
 
@@ -45,6 +46,15 @@ public sealed class AesGcmCryptoProvider : ICryptoProvider
         Refresh();
 
         _refreshTask = RunRefreshLoopAsync(_cts.Token);
+    }
+
+    internal AesGcmCryptoProvider(IKeyWrapper keyWrapper, byte[] notWrapped)
+    {
+        _keyWrapper = keyWrapper;
+        _wrapped = notWrapped;
+        _expirySeconds = 7200;
+        _current = new  AesGcmCryptoSession(notWrapped);
+        _refreshTask = null;
     }
     
     public int Encrypt(Span<byte> plaintext, Span<byte> result)
@@ -74,6 +84,12 @@ public sealed class AesGcmCryptoProvider : ICryptoProvider
         ObjectDisposedException.ThrowIf(session is null, this);
         return session.Decrypt(ciphertext, aad, result);
     }
+
+    public int GetEncryptedAllocationLength(int length)
+        => length + ExtraAllocationLength;
+
+    public int GetDecryptedAllocationLength(int length)
+        => length - ExtraAllocationLength;
 
     private void Refresh()
     {
@@ -126,10 +142,11 @@ public sealed class AesGcmCryptoProvider : ICryptoProvider
     public void Dispose()
     {
         _cts.Cancel();
-
+        ArrayUtility.ZeroMemory(_wrapped);
+        
         try
         {
-            _refreshTask.Wait();
+            _refreshTask?.Wait();
         }
         catch (AggregateException ex)
             when (ex.InnerException is OperationCanceledException)

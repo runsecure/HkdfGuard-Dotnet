@@ -4,7 +4,7 @@ namespace HkdfGuard.Abstractions;
 /// A named, string-level data protector: the name given at construction is used as the
 /// Additional Auth Data for every Encrypt/Decrypt, binding a protected value to the purpose it
 /// was protected for so it can't be reused under a different one. Encrypt/Decrypt resolve the
-/// actual IDataProtectionKey to use from a KeyRing, rather than holding one key permanently.
+/// actual IDataEncryptionKey to use from a KeyRing, rather than holding one key permanently.
 /// </summary>
 public interface IDataProtector
 {

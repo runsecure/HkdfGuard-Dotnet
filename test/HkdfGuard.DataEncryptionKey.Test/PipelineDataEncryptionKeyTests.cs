@@ -1,60 +1,34 @@
 using System.Security.Cryptography;
 using HkdfGuard.Abstractions;
 using HkdfGuard.CryptoSession.AesGcm256;
-using HkdfGuard.DataEncryptionKey;
 
 namespace HkdfGuard.DataEncryptionKey.Test;
 
 public class PipelineDataEncryptionKeyTests
 {
-    private static readonly Func<IKeyWrapper, byte[], ICryptoProvider> SessionProviderFactory =
-        (keyWrapper, wrapped) => new AesGcmCryptoProvider(keyWrapper, wrapped, 60);
+    private static readonly ICryptoProviderFactory CryptoProviderFactory = new AesGcmCryptoProviderFactory();
 
-    [Fact]
-    public void Constructor_WithNoDekSupplied_GeneratesARandom32ByteDek()
+    private static PipelineDataEncryptionKey CreateKey(byte[]? dek = null)
     {
-        using var key = new PipelineDataEncryptionKey(SessionProviderFactory);
-
-        Assert.Equal(32, key.AsSpan().Length);
-        Assert.False(key.AsSpan().ToArray().All(b => b == 0));
+        dek ??= RandomNumberGenerator.GetBytes(32);
+        var provider = CryptoProviderFactory.CreateForPipeline(new DummyKeyWrapper(), dek);
+        return new PipelineDataEncryptionKey(provider, dek);
     }
 
     [Fact]
-    public void Constructor_WithNoDekSupplied_GeneratesADifferentDekEachTime()
-    {
-        using var key1 = new PipelineDataEncryptionKey(SessionProviderFactory);
-        using var key2 = new PipelineDataEncryptionKey(SessionProviderFactory);
-
-        Assert.NotEqual(key1.AsSpan().ToArray(), key2.AsSpan().ToArray());
-    }
-
-    [Fact]
-    public void Constructor_WithSuppliedDek_UsesItAsIs()
+    public void AsSpan_ReturnsTheSuppliedDek()
     {
         var dek = RandomNumberGenerator.GetBytes(32);
         var expected = (byte[])dek.Clone();
-
-        using var key = new PipelineDataEncryptionKey(dek, SessionProviderFactory);
+        var key = CreateKey(dek);
 
         Assert.Equal(expected, key.AsSpan().ToArray());
     }
 
     [Fact]
-    public void Constructor_WithEmptyDek_Throws()
-    {
-        Assert.Throws<ArgumentException>(() => new PipelineDataEncryptionKey(new byte[32], SessionProviderFactory));
-    }
-
-    [Fact]
-    public void Constructor_WithWrongSizeDek_Throws()
-    {
-        Assert.Throws<ArgumentException>(() => new PipelineDataEncryptionKey(RandomNumberGenerator.GetBytes(16), SessionProviderFactory));
-    }
-
-    [Fact]
     public void EncryptDecrypt_RoundTrips()
     {
-        using var key = new PipelineDataEncryptionKey(SessionProviderFactory);
+        var key = CreateKey();
         var plaintext = "top secret"u8.ToArray();
         var expected = (byte[])plaintext.Clone();
 
@@ -69,7 +43,7 @@ public class PipelineDataEncryptionKeyTests
     [Fact]
     public void EncryptDecrypt_WithAad_RoundTrips()
     {
-        using var key = new PipelineDataEncryptionKey(SessionProviderFactory);
+        var key = CreateKey();
         var plaintext = "top secret"u8.ToArray();
         var expected = (byte[])plaintext.Clone();
         var aad = "context"u8.ToArray();
@@ -84,7 +58,7 @@ public class PipelineDataEncryptionKeyTests
     [Fact]
     public void Decrypt_WithMismatchedAad_Throws()
     {
-        using var key = new PipelineDataEncryptionKey(SessionProviderFactory);
+        var key = CreateKey();
         var encrypted = key.Encrypt("top secret"u8.ToArray(), "context-a"u8.ToArray());
 
         Assert.Throws<AuthenticationTagMismatchException>(() =>
@@ -92,10 +66,10 @@ public class PipelineDataEncryptionKeyTests
     }
 
     [Fact]
-    public void TwoInstances_WithDifferentGeneratedDeks_CannotDecryptEachOthersCiphertext()
+    public void TwoInstances_WithDifferentDeks_CannotDecryptEachOthersCiphertext()
     {
-        using var key1 = new PipelineDataEncryptionKey(SessionProviderFactory);
-        using var key2 = new PipelineDataEncryptionKey(SessionProviderFactory);
+        var key1 = CreateKey();
+        var key2 = CreateKey();
 
         var encrypted = key1.Encrypt("top secret"u8.ToArray());
 
@@ -105,10 +79,24 @@ public class PipelineDataEncryptionKeyTests
     [Fact]
     public void Dispose_ZeroesTheDek()
     {
-        var key = new PipelineDataEncryptionKey(SessionProviderFactory);
+        var dek = RandomNumberGenerator.GetBytes(32);
+        var key = CreateKey(dek);
 
         key.Dispose();
 
-        Assert.Equal(new byte[32], key.AsSpan().ToArray());
+        Assert.Equal(new byte[32], dek);
+    }
+
+    [Fact]
+    public void Dispose_DoesNotThrow()
+    {
+        // Regression test: AesGcmCryptoProvider's pipeline-only constructor used to leave its
+        // background-refresh task field null, which crashed Dispose with a
+        // NullReferenceException once PipelineDataEncryptionKey started disposing its provider.
+        var key = CreateKey();
+
+        var ex = Record.Exception(key.Dispose);
+
+        Assert.Null(ex);
     }
 }

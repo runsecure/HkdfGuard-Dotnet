@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 namespace HkdfGuard.Cache;
 
 /// <summary>
-/// Default IProtectedCache. Backed by a single, already-built IDataProtectionKey - every
+/// Default IProtectedCache. Backed by a single, already-built IDataEncryptionKey - every
 /// Add/AddOrUpdate encrypts through it (see ProtectedCacheBase), every Decrypt reveals
 /// through it. Add uses TryAdd as its atomicity gate so a duplicate name is rejected even under
 /// concurrent callers; AddOrUpdate's upsert and Decrypt's reads are otherwise lock-free, so
@@ -17,8 +17,8 @@ namespace HkdfGuard.Cache;
 /// supplied, receives a debug log per sensitive operation and an error log per failure alongside
 /// the existing Activity/CacheMetrics.Operations telemetry.
 /// </summary>
-public sealed class ProtectedCache(IDataProtectionKey dataProtectionKey, ILogger<ProtectedCache>? logger = null)
-    : ProtectedCacheBase(dataProtectionKey), IProtectedCache
+public sealed class ProtectedCache(IDataEncryptionKey dataEncryptionKey, ILogger<ProtectedCache>? logger = null)
+    : ProtectedCacheBase(dataEncryptionKey), IProtectedCache
 {
     /// <inheritdoc/>
     public void Add(string name, Span<byte> plaintext)

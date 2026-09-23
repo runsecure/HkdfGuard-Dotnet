@@ -41,4 +41,18 @@ public interface ICryptoProvider : IDisposable
     /// <param name="result">The span to receive the decrypted data</param>
     /// <returns>The number of bytes written to the decrypted span</returns>
     public int Decrypt(ReadOnlySpan<byte> ciphertext, ReadOnlySpan<byte> aad, Span<byte> result);
+
+    /// <summary>
+    /// Gets the required length for allocation from the CryptoProvider for encrypted data
+    /// </summary>
+    /// <param name="length">The required length for an encrypted value</param>
+    /// <returns>Number of bytes required in the encrypted array</returns>
+    public int GetEncryptedAllocationLength(int length);
+    
+    /// <summary>
+    /// Gets the required length for allocation from the CryptoProvider for decrypted data
+    /// </summary>
+    /// <param name="length">The required length for a decrypted value</param>
+    /// <returns>Number of bytes required in the decrypted array</returns>
+    public int GetDecryptedAllocationLength(int length);
 }

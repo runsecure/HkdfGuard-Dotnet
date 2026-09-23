@@ -22,7 +22,7 @@ public sealed class KeyRingBuilder
     private readonly SortedDictionary<int, string> _keyFiles = [];
     private readonly List<int> _ephemeralVersions = [];
     private IKeyWrapper? _keyWrapper;
-    private Func<IKeyWrapper, byte[], ICryptoProvider>? _sessionProviderFactory;
+    private ICryptoProviderFactory? _cryptoProviderFactory;
     private IEncryptedFormatProvider _formatProvider = new DefaultFormatProvider();
 
     public string? ServiceName { get; private set; }
@@ -78,9 +78,9 @@ public sealed class KeyRingBuilder
     /// per registered file with the shared IKeyWrapper and that file's own wrapped bytes - e.g.
     /// <c>(kw, wrapped) => new AesGcmCryptoSessionProvider(kw, wrapped, 60)</c>.
     /// </summary>
-    public KeyRingBuilder WithSessionProviderFactory(Func<IKeyWrapper, byte[], ICryptoProvider> sessionProviderFactory)
+    public KeyRingBuilder WithCryptoProviderFactory(ICryptoProviderFactory cryptoProviderFactory)
     {
-        _sessionProviderFactory = sessionProviderFactory;
+        _cryptoProviderFactory = cryptoProviderFactory;
         return this;
     }
 
@@ -130,23 +130,27 @@ public sealed class KeyRingBuilder
         if (_keyWrapper is null)
             throw new InvalidOperationException("A key wrapper is required - call WithKeyWrapper first.");
 
-        if (_sessionProviderFactory is null)
-            throw new InvalidOperationException("A session provider factory is required - call WithSessionProviderFactory first.");
+        if (_cryptoProviderFactory is null)
+            throw new InvalidOperationException("A session provider factory is required - call WithCryptoProviderFactory first.");
 
         if (_keyFiles.Count == 0 && _ephemeralVersions.Count == 0)
             throw new InvalidOperationException("At least one key file or ephemeral key is required - call WithKeyFile or WithEphemeralKey first.");
+
+        if (CachedKeyExpiry is null)
+            throw new InvalidOperationException("A cached key expiry is required - call WithCachedKeyExpiry first.");
 
         var ring = new KeyRing(_formatProvider);
         foreach (var (version, path) in _keyFiles)
         {
             var wrapped = File.ReadAllBytes(path);
-            var sessionProvider = _sessionProviderFactory(_keyWrapper, wrapped);
+            var sessionProvider = _cryptoProviderFactory.Create(_keyWrapper, wrapped, CachedKeyExpiry.Value);
             ring.Add(version, new KeyWrappedDataEncryptionKey(sessionProvider));
         }
 
         foreach (var version in _ephemeralVersions)
         {
-            ring.Add(version, new EphemeralDataEncryptionKey(_keyWrapper, _sessionProviderFactory));
+            var sessionProvider = _cryptoProviderFactory.CreateEphemeral(_keyWrapper, CachedKeyExpiry.Value);
+            ring.Add(version, new KeyWrappedDataEncryptionKey(sessionProvider));
         }
 
         return ring;

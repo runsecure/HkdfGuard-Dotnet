@@ -5,7 +5,7 @@ namespace HkdfGuard.Options;
 /// <summary>
 /// Copies a validated HkdfGuardOptions instance onto a KeyRingBuilder - ServiceName,
 /// CachedKeyExpiry, KeyRotationDays, every registered KeyFile, and every registered
-/// EphemeralKey. The caller still supplies WithKeyWrapper/WithSessionProviderFactory/
+/// EphemeralKey. The caller still supplies WithKeyWrapper/WithCryptoProviderFactory/
 /// WithFormatProvider and calls Build() themselves - those are behavior, not something
 /// HkdfGuardOptions can carry as data.
 /// </summary>

@@ -1,6 +1,6 @@
 namespace HkdfGuard.Abstractions;
 
-public interface IDataProtectionKey
+public interface IDataEncryptionKey
 {
     /// <summary>
     /// Key Wrapper for protecting an encryption key

@@ -7,8 +7,7 @@ namespace HkdfGuard.DataEncryptionKey.Test;
 
 public class KeyRingBuilderTests
 {
-    private static readonly Func<IKeyWrapper, byte[], ICryptoProvider> SessionProviderFactory =
-        (keyWrapper, wrapped) => new AesGcmCryptoProvider(keyWrapper, wrapped, 60);
+    private static readonly ICryptoProviderFactory CryptoProviderFactory = new AesGcmCryptoProviderFactory();
 
     [Fact]
     public void WithServiceName_SetsServiceName()
@@ -58,17 +57,19 @@ public class KeyRingBuilderTests
     public void Build_WithoutKeyWrapper_Throws()
     {
         var builder = new KeyRingBuilder()
-            .WithSessionProviderFactory(SessionProviderFactory)
+            .WithCryptoProviderFactory(CryptoProviderFactory)
+            .WithCachedKeyExpiry(60)
             .WithEphemeralKey(1);
 
         Assert.Throws<InvalidOperationException>(() => builder.Build());
     }
 
     [Fact]
-    public void Build_WithoutSessionProviderFactory_Throws()
+    public void Build_WithoutCryptoProviderFactory_Throws()
     {
         var builder = new KeyRingBuilder()
             .WithKeyWrapper(new FakeKeyWrapper(RandomNumberGenerator.GetBytes(32)))
+            .WithCachedKeyExpiry(60)
             .WithEphemeralKey(1);
 
         Assert.Throws<InvalidOperationException>(() => builder.Build());
@@ -79,7 +80,19 @@ public class KeyRingBuilderTests
     {
         var builder = new KeyRingBuilder()
             .WithKeyWrapper(new FakeKeyWrapper(RandomNumberGenerator.GetBytes(32)))
-            .WithSessionProviderFactory(SessionProviderFactory);
+            .WithCryptoProviderFactory(CryptoProviderFactory)
+            .WithCachedKeyExpiry(60);
+
+        Assert.Throws<InvalidOperationException>(() => builder.Build());
+    }
+
+    [Fact]
+    public void Build_WithoutCachedKeyExpiry_Throws()
+    {
+        var builder = new KeyRingBuilder()
+            .WithKeyWrapper(new FakeKeyWrapper(RandomNumberGenerator.GetBytes(32)))
+            .WithCryptoProviderFactory(CryptoProviderFactory)
+            .WithEphemeralKey(1);
 
         Assert.Throws<InvalidOperationException>(() => builder.Build());
     }
@@ -94,7 +107,8 @@ public class KeyRingBuilderTests
 
             var ring = new KeyRingBuilder()
                 .WithKeyWrapper(new FakeKeyWrapper(RandomNumberGenerator.GetBytes(32)))
-                .WithSessionProviderFactory(SessionProviderFactory)
+                .WithCryptoProviderFactory(CryptoProviderFactory)
+                .WithCachedKeyExpiry(60)
                 .WithKeyFile(1, path)
                 .Build();
 
@@ -118,7 +132,8 @@ public class KeyRingBuilderTests
 
             var ring = new KeyRingBuilder()
                 .WithKeyWrapper(new FakeKeyWrapper(RandomNumberGenerator.GetBytes(32)))
-                .WithSessionProviderFactory(SessionProviderFactory)
+                .WithCryptoProviderFactory(CryptoProviderFactory)
+                .WithCachedKeyExpiry(60)
                 .WithKeyFile(1, path1)
                 .WithKeyFile(2, path2)
                 .Build();
@@ -137,7 +152,8 @@ public class KeyRingBuilderTests
     {
         var ring = new KeyRingBuilder()
             .WithKeyWrapper(new FakeKeyWrapper(RandomNumberGenerator.GetBytes(32)))
-            .WithSessionProviderFactory(SessionProviderFactory)
+            .WithCryptoProviderFactory(CryptoProviderFactory)
+            .WithCachedKeyExpiry(60)
             .WithEphemeralKey(1)
             .Build();
 
@@ -149,7 +165,8 @@ public class KeyRingBuilderTests
     {
         var ring = new KeyRingBuilder()
             .WithKeyWrapper(new FakeKeyWrapper(RandomNumberGenerator.GetBytes(32)))
-            .WithSessionProviderFactory(SessionProviderFactory)
+            .WithCryptoProviderFactory(CryptoProviderFactory)
+            .WithCachedKeyExpiry(60)
             .WithEphemeralKey(1)
             .Build();
 
@@ -175,7 +192,8 @@ public class KeyRingBuilderTests
 
             var ring = new KeyRingBuilder()
                 .WithKeyWrapper(new FakeKeyWrapper(RandomNumberGenerator.GetBytes(32)))
-                .WithSessionProviderFactory(SessionProviderFactory)
+                .WithCryptoProviderFactory(CryptoProviderFactory)
+                .WithCachedKeyExpiry(60)
                 .WithKeyFile(1, path)
                 .WithEphemeralKey(2)
                 .Build();
@@ -195,7 +213,8 @@ public class KeyRingBuilderTests
 
         var ring = new KeyRingBuilder()
             .WithKeyWrapper(new FakeKeyWrapper(RandomNumberGenerator.GetBytes(32)))
-            .WithSessionProviderFactory(SessionProviderFactory)
+            .WithCryptoProviderFactory(CryptoProviderFactory)
+            .WithCachedKeyExpiry(60)
             .WithEphemeralKey(1)
             .WithFormatProvider(recordingFormatProvider)
             .Build();
@@ -203,5 +222,46 @@ public class KeyRingBuilderTests
         ring.CreateProtector("purpose").Encrypt("hello".AsSpan());
 
         Assert.True(recordingFormatProvider.FormatCalled);
+    }
+
+    [Fact]
+    public void Build_WithKeyFile_PassesCachedKeyExpiryToTheCryptoProviderFactory()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllBytes(path, "wrapped"u8.ToArray());
+            var recordingFactory = new RecordingCryptoProviderFactory();
+
+            _ = new KeyRingBuilder()
+                .WithKeyWrapper(new FakeKeyWrapper(RandomNumberGenerator.GetBytes(32)))
+                .WithCryptoProviderFactory(recordingFactory)
+                .WithCachedKeyExpiry(123)
+                .WithKeyFile(1, path)
+                .Build();
+
+            Assert.Equal([123], recordingFactory.CreateExpirySecondsCalls);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void Build_WithEphemeralKey_PassesCachedKeyExpiryRatherThanVersionToTheCryptoProviderFactory()
+    {
+        // Regression test: CreateEphemeral used to be called with the KeyRing version instead of
+        // CachedKeyExpiry - a version of 1 would silently become a 1-second session lifetime.
+        var recordingFactory = new RecordingCryptoProviderFactory();
+
+        _ = new KeyRingBuilder()
+            .WithKeyWrapper(new FakeKeyWrapper(RandomNumberGenerator.GetBytes(32)))
+            .WithCryptoProviderFactory(recordingFactory)
+            .WithCachedKeyExpiry(123)
+            .WithEphemeralKey(42)
+            .Build();
+
+        Assert.Equal([123], recordingFactory.CreateEphemeralExpirySecondsCalls);
     }
 }

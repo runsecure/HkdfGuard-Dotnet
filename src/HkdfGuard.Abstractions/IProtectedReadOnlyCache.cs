@@ -2,7 +2,7 @@ namespace HkdfGuard.Abstractions;
 
 /// <summary>
 /// Read surface of a highly concurrent name -&gt; encrypted-value cache backed by a single
-/// IDataProtectionKey. Names are compared case-insensitively (OrdinalIgnoreCase), matching
+/// IDataEncryptionKey. Names are compared case-insensitively (OrdinalIgnoreCase), matching
 /// ConcurrentDictionary conventions. Decrypt reveals a stored value back into a caller-owned
 /// buffer, returning 0 for a missing name rather than throwing. Nothing here ever holds
 /// plaintext beyond the duration of a single Decrypt call - only the encrypted bytes are

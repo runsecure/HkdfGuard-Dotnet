@@ -6,7 +6,7 @@ using HkdfGuard.Diagnostics;
 namespace HkdfGuard.DataEncryptionKey;
 
 /// <summary>
-/// Tracks IDataProtectionKey instances by version for highly concurrent workloads (thousands of
+/// Tracks IDataEncryptionKey instances by version for highly concurrent workloads (thousands of
 /// operations per second). Get is served straight off a ConcurrentDictionary, so the hot read
 /// path never blocks - no telemetry on that path either, only on a Get miss, since that's the
 /// exceptional case and startup overhead there is irrelevant. Add is serialized through a
@@ -22,7 +22,7 @@ public sealed class KeyRing(IEncryptedFormatProvider formatProvider) : IDisposab
 {
     private const int NoCurrentVersion = int.MinValue;
 
-    private readonly ConcurrentDictionary<int, IDataProtectionKey> _keysByVersion = new();
+    private readonly ConcurrentDictionary<int, IDataEncryptionKey> _keysByVersion = new();
     private readonly SemaphoreSlim _addGate = new(1, 1);
     private volatile int _currentVersion = NoCurrentVersion;
 
@@ -45,9 +45,9 @@ public sealed class KeyRing(IEncryptedFormatProvider formatProvider) : IDisposab
     /// so far, it intrinsically becomes the new CurrentVersion.
     /// </summary>
     /// <param name="version">The key version to register</param>
-    /// <param name="key">The IDataProtectionKey for this version</param>
+    /// <param name="key">The IDataEncryptionKey for this version</param>
     /// <exception cref="ArgumentException">A key for this version is already registered</exception>
-    public void Add(int version, IDataProtectionKey key)
+    public void Add(int version, IDataEncryptionKey key)
     {
         using var activity = HkdfGuardTelemetry.DataProtection.ActivitySource.StartActivity(ActivityNames.DataProtection.KeyRingAdd);
 
@@ -80,9 +80,9 @@ public sealed class KeyRing(IEncryptedFormatProvider formatProvider) : IDisposab
     /// Retrieves the key registered for the given version
     /// </summary>
     /// <param name="version">The key version to retrieve</param>
-    /// <returns>The registered IDataProtectionKey</returns>
+    /// <returns>The registered IDataEncryptionKey</returns>
     /// <exception cref="KeyNotFoundException">No key is registered for this version</exception>
-    public IDataProtectionKey Get(int version)
+    public IDataEncryptionKey Get(int version)
     {
         if (_keysByVersion.TryGetValue(version, out var key))
             return key;
@@ -99,19 +99,19 @@ public sealed class KeyRing(IEncryptedFormatProvider formatProvider) : IDisposab
     /// unacceptable.
     /// </summary>
     /// <param name="version">The key version to retrieve</param>
-    /// <param name="key">The registered IDataProtectionKey, if found</param>
+    /// <param name="key">The registered IDataEncryptionKey, if found</param>
     /// <returns>True if a key was registered for this version</returns>
-    public bool TryGet(int version, out IDataProtectionKey? key)
+    public bool TryGet(int version, out IDataEncryptionKey? key)
         => _keysByVersion.TryGetValue(version, out key);
 
     /// <summary>
-    /// Retrieves CurrentVersion together with its IDataProtectionKey atomically - what
+    /// Retrieves CurrentVersion together with its IDataEncryptionKey atomically - what
     /// Encrypt-side operations (e.g. DataProtector.Encrypt) resolve fresh on every call, so they
     /// always reflect the latest rotation rather than a version captured once at construction.
     /// </summary>
-    /// <returns>The current version and its registered IDataProtectionKey</returns>
+    /// <returns>The current version and its registered IDataEncryptionKey</returns>
     /// <exception cref="InvalidOperationException">No key has been added yet</exception>
-    public (int Version, IDataProtectionKey Key) GetCurrent()
+    public (int Version, IDataEncryptionKey Key) GetCurrent()
     {
         try
         {

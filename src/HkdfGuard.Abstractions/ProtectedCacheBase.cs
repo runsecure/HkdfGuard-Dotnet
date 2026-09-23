@@ -6,7 +6,7 @@ namespace HkdfGuard.Abstractions;
 
 /// <summary>
 /// Shared IProtectedReadOnlyCache plumbing for every cache in this library: a single
-/// IDataProtectionKey, a ConcurrentDictionary&lt;string, byte[]&gt; of encrypted bytes keyed
+/// IDataEncryptionKey, a ConcurrentDictionary&lt;string, byte[]&gt; of encrypted bytes keyed
 /// case-insensitively (OrdinalIgnoreCase), and the encrypt/decrypt/telemetry logic every
 /// concrete cache needs. Decrypt/TryGetMaxDecryptedLength fall back to TryPopulate on a miss
 /// before giving up - the default implementation here just returns false (nothing to pull from),
@@ -14,7 +14,7 @@ namespace HkdfGuard.Abstractions;
 /// the plaintext value and encrypt it into Cache on demand, so nothing here ever holds plaintext
 /// beyond the duration of a single call.
 /// </summary>
-public abstract class ProtectedCacheBase(IDataProtectionKey dataProtectionKey) : IProtectedReadOnlyCache
+public abstract class ProtectedCacheBase(IDataEncryptionKey dataEncryptionKey) : IProtectedReadOnlyCache
 {
     /// <summary>
     /// The encrypted values this cache holds, keyed case-insensitively. Protected so concrete
@@ -44,7 +44,7 @@ public abstract class ProtectedCacheBase(IDataProtectionKey dataProtectionKey) :
             if (!TryGetEncrypted(name, out var encrypted))
                 return 0;
 
-            return dataProtectionKey.Decrypt(encrypted, result);
+            return dataEncryptionKey.Decrypt(encrypted, result);
         }
         catch (Exception ex)
         {
@@ -70,7 +70,7 @@ public abstract class ProtectedCacheBase(IDataProtectionKey dataProtectionKey) :
             Span<byte> plaintextBytes = stackalloc byte[encrypted.Length];
             try
             {
-                var decryptedLength = dataProtectionKey.Decrypt(encrypted, plaintextBytes);
+                var decryptedLength = dataEncryptionKey.Decrypt(encrypted, plaintextBytes);
                 return Encoding.UTF8.GetChars(plaintextBytes[..decryptedLength], result);
             }
             finally
@@ -111,12 +111,12 @@ public abstract class ProtectedCacheBase(IDataProtectionKey dataProtectionKey) :
     }
 
     /// <summary>
-    /// Encrypts plaintext through this cache's IDataProtectionKey.
+    /// Encrypts plaintext through this cache's IDataEncryptionKey.
     /// </summary>
-    protected byte[] Encrypt(Span<byte> plaintext) => dataProtectionKey.Encrypt(plaintext);
+    protected byte[] Encrypt(Span<byte> plaintext) => dataEncryptionKey.Encrypt(plaintext);
 
     /// <summary>
-    /// Encrypts plaintext (as UTF8 bytes) through this cache's IDataProtectionKey. plaintext is
+    /// Encrypts plaintext (as UTF8 bytes) through this cache's IDataEncryptionKey. plaintext is
     /// zeroed as a side effect - callers that only hold a string must copy it into a caller-owned
     /// Span&lt;char&gt; (e.g. via stackalloc) first, since a string's own backing buffer can't be
     /// safely cleared.
@@ -127,7 +127,7 @@ public abstract class ProtectedCacheBase(IDataProtectionKey dataProtectionKey) :
         try
         {
             Encoding.UTF8.GetBytes(plaintext, plaintextBytes);
-            return dataProtectionKey.Encrypt(plaintextBytes);
+            return dataEncryptionKey.Encrypt(plaintextBytes);
         }
         finally
         {
