@@ -15,7 +15,7 @@ public class NativeHkdfKeyWrapperV1Tests
     }
 
     [Fact]
-    public void Encrypt_TwoArgOverload_DelegatesToLibraryWithEmptyAad()
+    public void Encrypt_DelegatesToLibrary()
     {
         var fakeLibrary = new FakeHkdfGuardKmsLibrary
         {
@@ -33,26 +33,6 @@ public class NativeHkdfKeyWrapperV1Tests
         Assert.Equal("service-a", fakeLibrary.LastService);
         Assert.Equal(plaintext, fakeLibrary.LastWrapPlaintext);
         Assert.Equal(new byte[] { 10, 20, 30, 40 }, resultBuffer[..4]);
-    }
-
-    [Fact]
-    public void Encrypt_ThreeArgOverload_WithEmptyAad_Succeeds()
-    {
-        var fakeLibrary = new FakeHkdfGuardKmsLibrary
-        {
-            WrapPayloadToEmit = new byte[] { 99, 98, 97 }
-        };
-        var wrapper = new NativeHkdfKeyWrapperV1("service-b", fakeLibrary);
-
-        var plaintext = new byte[] { 5, 6, 7 };
-        var resultBuffer = new byte[8];
-
-        var bytesWritten = wrapper.Encrypt(plaintext.AsSpan(), resultBuffer.AsSpan());
-
-        Assert.Equal(3, bytesWritten);
-        Assert.Equal(1, fakeLibrary.WrapCallCount);
-        Assert.Equal("service-b", fakeLibrary.LastService);
-        Assert.Equal(plaintext, fakeLibrary.LastWrapPlaintext);
     }
 
     [Theory]
@@ -78,7 +58,7 @@ public class NativeHkdfKeyWrapperV1Tests
     }
 
     [Fact]
-    public void Decrypt_TwoArgOverload_DelegatesToLibraryWithEmptyAad()
+    public void Decrypt_DelegatesToLibrary()
     {
         var fakeLibrary = new FakeHkdfGuardKmsLibrary
         {
@@ -96,26 +76,6 @@ public class NativeHkdfKeyWrapperV1Tests
         Assert.Equal("service-a", fakeLibrary.LastService);
         Assert.Equal(wrapped, fakeLibrary.LastUnwrapWrapped);
         Assert.Equal(new byte[] { 1, 2, 3, 4, 5 }, resultBuffer[..5]);
-    }
-
-    [Fact]
-    public void Decrypt_ThreeArgOverload_WithEmptyAad_Succeeds()
-    {
-        var fakeLibrary = new FakeHkdfGuardKmsLibrary
-        {
-            UnwrapPayloadToEmit = new byte[] { 7, 8, 9 }
-        };
-        var wrapper = new NativeHkdfKeyWrapperV1("service-b", fakeLibrary);
-
-        var wrapped = new byte[] { 99, 98, 97 };
-        var resultBuffer = new byte[8];
-
-        var bytesWritten = wrapper.Decrypt(wrapped.AsSpan(), resultBuffer.AsSpan());
-
-        Assert.Equal(3, bytesWritten);
-        Assert.Equal(1, fakeLibrary.UnwrapCallCount);
-        Assert.Equal("service-b", fakeLibrary.LastService);
-        Assert.Equal(wrapped, fakeLibrary.LastUnwrapWrapped);
     }
 
     [Theory]

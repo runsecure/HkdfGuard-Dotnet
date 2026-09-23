@@ -12,8 +12,8 @@ namespace HkdfGuard.KeyWrapping.V1;
 /// format, and its own key derivation. Since Decrypt takes its wrapped payload as an explicit
 /// argument rather than one bound at construction, a single instance freely handles both
 /// directions, and any number of different wrapped payloads sharing the same service name. The
-/// native ABI has no concept of AAD, so the 3-arg overloads accept only an empty aad; anything
-/// else throws NotSupportedException.
+/// native ABI has no concept of AAD, so IKeyWrapper itself no longer exposes an AAD-taking
+/// overload.
 /// </summary>
 public class NativeHkdfKeyWrapperV1 : IKeyWrapper
 {
